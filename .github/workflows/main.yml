@@ -1,0 +1,39 @@
+name: Build Theos Project
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - '*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-rootless:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Theos Dependencies
+        run: |
+          brew install ldid dpkg
+
+      - name: Install Theos
+        run: |
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+
+      - name: Build Rootless Package
+        run: |
+          export THEOS=/opt/theos
+          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
+          export TARGET=iphone:clang:latest:15.0
+          export ARCHS=arm64
+          make package ROOTLESS=1 FINALPACKAGE=1
+
+      - name: Upload Rootless Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: RootHideManagerApp-arm64.deb
+          path: ./packages/*.deb
