@@ -7,7 +7,7 @@ uuids:
   - target:          arm64e-ios
     value:           84FCF28A-1845-3F04-9E04-C0C2DB09BF73
 flags:           [ not_app_extension_safe ]
-install-name:    '@loader_path/.jbroot/usr/lib/libroothide.dylib'
+install-name:    '@loader_path/var/jb/usr/lib/libroothide.dylib'
 current-version: 0
 compatibility-version: 0
 exports:
