@@ -87,7 +87,7 @@
 }
 
 - (void)reloadMenu {
-    NSString *rulesFilePath = "/var/jb/var/mobile/Library/RootHide/varCleanRules-custom.plist";
+    NSString *rulesFilePath = @"/var/jb/var/mobile/Library/RootHide/varCleanRules-custom.plist";
     NSCharacterSet *CharacterSet = [NSCharacterSet URLQueryAllowedCharacterSet];
     NSString *encodedURLString = [rulesFilePath stringByAddingPercentEncodingWithAllowedCharacters:CharacterSet];
     NSURL *filzaURL = [NSURL URLWithString:[@"filza://view" stringByAppendingString:encodedURLString]];
