@@ -1,7 +1,7 @@
 Package: com.roothide.manager
 Name: RootHide Manager
 Version: 0.7
-Architecture: iphoneos-arm64e
+Architecture: iphoneos-arm64
 Depends: firmware (>= 15.0)
 Description: Configuare RootHide's Features
 Maintainer: RootHide
