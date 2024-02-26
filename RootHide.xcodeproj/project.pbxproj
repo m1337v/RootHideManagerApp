@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		842F23E62AA321E900EE2E9A /* libroothide.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 842F23E52AA321E900EE2E9A /* libroothide.tbd */; };
 		8477B5E22A7526AB000632D0 /* NSJSONSerialization+Comments.m in Sources */ = {isa = PBXBuildFile; fileRef = 8477B5E02A7526AB000632D0 /* NSJSONSerialization+Comments.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		8477B6052A866437000632D0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8477B6072A866437000632D0 /* Localizable.strings */; };
 		84BBFAC92A7420100054A68E /* varCleanRules.json in Resources */ = {isa = PBXBuildFile; fileRef = 84BBFAC72A741C800054A68E /* varCleanRules.json */; };
@@ -23,7 +22,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		842F23E52AA321E900EE2E9A /* libroothide.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; path = libroothide.tbd; sourceTree = "<group>"; };
 		842F706A2ACB58BB002E5574 /* control */ = {isa = PBXFileReference; lastKnownFileType = text; path = control; sourceTree = "<group>"; };
 		8438C17D2AB3361A001BAB8C /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8438C17E2AB33673001BAB8C /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -62,7 +60,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BF69FE4E28123C7800542668 /* AVFoundation.framework in Frameworks */,
-				842F23E62AA321E900EE2E9A /* libroothide.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,7 +122,6 @@
 		BFE9353B27F753D30022D46C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				842F23E52AA321E900EE2E9A /* libroothide.tbd */,
 				BF69FE4D28123C7800542668 /* AVFoundation.framework */,
 				BFE9353C27F753D30022D46C /* Accelerate.framework */,
 			);
@@ -359,7 +355,7 @@
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 49LJ27SG38;
+				DEVELOPMENT_TEAM = 33ZDA25479;
 				ENABLE_BITCODE = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RootHide/Info.plist;
@@ -379,7 +375,7 @@
 					"$(PROJECT_DIR)/RootHide",
 				);
 				MARKETING_VERSION = 5.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.roothide.manager;
+				PRODUCT_BUNDLE_IDENTIFIER = com.m1337.varclean;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -396,7 +392,7 @@
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 49LJ27SG38;
+				DEVELOPMENT_TEAM = 33ZDA25479;
 				ENABLE_BITCODE = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RootHide/Info.plist;
@@ -416,7 +412,7 @@
 					"$(PROJECT_DIR)/RootHide",
 				);
 				MARKETING_VERSION = 5.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.roothide.manager;
+				PRODUCT_BUNDLE_IDENTIFIER = com.m1337.varclean;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
