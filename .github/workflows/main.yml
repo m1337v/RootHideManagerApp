@@ -38,7 +38,7 @@ jobs:
       - name: Locate .app File and Prepare for Packaging
         run: |
           mkdir -p Payload
-          cp -r build/Release-iphoneos/RootHide.app Payload/RootHide.app
+          cp -r ${{ env.APP_DIR_PATH }} Payload/RootHide.app
 
       - name: Sign the .app with entitlements
         run: |
@@ -46,10 +46,10 @@ jobs:
 
       - name: Re-package IPA after signing
         run: |
-          zip -r9 RootHide.tipa Payload
+          zip -r9 RootHide15.tipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v3
         with:
           name: RootHide
-          path: RootHide.tipa
+          path: RootHide15.tipa
