@@ -1,4 +1,4 @@
-name: Build and Package Rootless
+name: Build and Package Rootful
 
 on:
   push:
