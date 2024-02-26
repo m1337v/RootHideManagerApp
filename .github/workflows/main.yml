@@ -38,11 +38,13 @@ jobs:
       - name: Locate .app File and Prepare for Packaging
         run: |
           mkdir -p Payload
-          cp -r ${{ env.APP_DIR_PATH }} Payload/RootHide.app
+          ROOT_HIDE_DIR=$(find /Users/runner/Library/Developer/Xcode/DerivedData/ -name 'RootHide-*' -type d -print | head -n 1)
+          APP_DIR="${ROOT_HIDE_DIR}/Build/Products/Release-iphoneos/RootHide.app"
+          cp -r "$APP_DIR" Payload/
 
       - name: Sign the .app with entitlements
         run: |
-          cp -r /Users/runner/Library/Developer/Xcode/DerivedData/RootHide-gnlzicaebsezgdgsjvaizjbpsxwq/Build/Products/Release-iphoneos/RootHide.app Payload/
+          ldid -S./entitlements.plist Payload/RootHide.app/RootHide
 
       - name: Re-package IPA after signing
         run: |
