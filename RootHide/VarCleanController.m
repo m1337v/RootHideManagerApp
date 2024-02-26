@@ -173,10 +173,10 @@
     NSLog(@"updateData...");
     self.tableData = [[NSMutableArray alloc] init];
     
-    NSString *rulesFilePath = @"/var/jb/var/mobile/Library/RootHide/varCleanRules.plist";
+    NSString *rulesFilePath = @"/var/mobile/Library/RootHide/varCleanRules.plist";
     NSDictionary *rules = [NSDictionary dictionaryWithContentsOfFile:rulesFilePath];
     
-    NSString *customedRulesFilePath = @"/var/jbvar/mobile/Library/RootHide/varCleanRules-custom.plist";
+    NSString *customedRulesFilePath = @"/var/mobile/Library/RootHide/varCleanRules-custom.plist";
     NSMutableDictionary *customedRules = [NSMutableDictionary dictionaryWithContentsOfFile:customedRulesFilePath];
     
     [self updateForRules:rules customed:customedRules];
