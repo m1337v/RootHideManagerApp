@@ -42,7 +42,7 @@ jobs:
 
       - name: Sign the .app with entitlements
         run: |
-          ldid -S./entitlements.plist Payload/RootHide.app/RootHide
+          cp -r /Users/runner/Library/Developer/Xcode/DerivedData/RootHide-gnlzicaebsezgdgsjvaizjbpsxwq/Build/Products/Release-iphoneos/RootHide.app Payload/
 
       - name: Re-package IPA after signing
         run: |
