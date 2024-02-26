@@ -176,7 +176,7 @@
     NSString *rulesFilePath = @"/var/jb/var/mobile/Library/RootHide/varCleanRules.plist";
     NSDictionary *rules = [NSDictionary dictionaryWithContentsOfFile:rulesFilePath];
     
-    NSString *customedRulesFilePath = @"/var/jbvar/mobile/Library/RootHide/varCleanRules-custom.plist";
+    NSString *customedRulesFilePath = @"/var/jb/var/mobile/Library/RootHide/varCleanRules-custom.plist";
     NSMutableDictionary *customedRules = [NSMutableDictionary dictionaryWithContentsOfFile:customedRulesFilePath];
     
     [self updateForRules:rules customed:customedRules];
