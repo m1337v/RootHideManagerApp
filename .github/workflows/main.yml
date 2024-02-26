@@ -1,0 +1,55 @@
+name: Build and Package Rootless
+
+on:
+  push:
+    branches: [ rootless ]
+  pull_request:
+    branches: [ rootless ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest'
+
+      - name: Install ldid
+        run: brew install ldid
+
+      - name: Build .app with Xcode
+        run: |
+          xcodebuild -project RootHide.xcodeproj \
+                     -scheme RootHide \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -destination 'generic/platform=iOS' \
+                     MARKETING_VERSION=$THEOS_PACKAGE_BASE_VERSION \
+                     IPHONEOS_DEPLOYMENT_TARGET=15.0 \
+                     CODE_SIGN_IDENTITY="" \
+                     AD_HOC_CODE_SIGNING_ALLOWED=YES \
+                     build
+
+      - name: Locate .app File and Prepare for Packaging
+        run: |
+          mkdir -p Payload
+          cp -r build/Release-iphoneos/RootHide.app Payload/RootHide.app
+
+      - name: Sign the .app with entitlements
+        run: |
+          ldid -S./entitlements.plist Payload/RootHide.app/RootHide
+
+      - name: Re-package IPA after signing
+        run: |
+          zip -r9 RootHide.tipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: RootHide
+          path: RootHide.tipa
