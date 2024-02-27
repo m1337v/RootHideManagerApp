@@ -223,7 +223,7 @@
     for (NSDictionary* group in self.tableData) {
         for (NSDictionary* item in group[@"items"]) {
             if ([item[@"checked"] boolValue]) {
-                [deletionList appendFormat:@"%@/%@\n", item[@"path"], item[@"name"]];
+                [deletionList appendFormat:@"%@/%@\n", item[@"path"]];
             }
         }
     }
