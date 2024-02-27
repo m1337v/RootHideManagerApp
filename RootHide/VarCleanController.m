@@ -218,51 +218,66 @@
 }
 
 - (void)varClean {
-    NSLog(@"self.tableData=%@", self.tableData);
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:Localized(@"Confirmation")
+                                                                             message:Localized(@"Are you sure you want to clean selected items?")
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
     
-    [self.tableView.refreshControl beginRefreshing];
-    
-    for(NSDictionary* group in [self.tableData copy]) {
-        for(NSDictionary* item in [group[@"items"] copy])
-        {
-            if(![item[@"checked"] boolValue]) continue;
-            
-            NSLog(@"clean=%@", item);
-            
-            /*
-            NSString* backup = jbroot(@"/var/mobile/Library/RootHide/backup");
-            NSString* newpath = [backup stringByAppendingPathComponent:item[@"path"]];
-            NSString* dirpath = [newpath stringByDeletingLastPathComponent];
-            NSLog(@"newpath=%@, dirpath=%@", newpath, dirpath);
-            if(![NSFileManager.defaultManager fileExistsAtPath:dirpath])
-                [NSFileManager.defaultManager createDirectoryAtPath:dirpath
-                                        withIntermediateDirectories:YES attributes:nil error:nil];
-            [NSFileManager.defaultManager copyItemAtPath:item[@"path"] toPath:newpath error:nil];
-            //*/
-            
-            
-            NSError* err;
-            if(![NSFileManager.defaultManager removeItemAtPath:item[@"path"] error:&err]) {
-                NSLog(@"clean failed=%@", err);
-                continue;
-            }
+    UIAlertAction *confirmAction = [UIAlertAction actionWithTitle:Localized(@"Confirm")
+                                                            style:UIAlertActionStyleDestructive
+                                                          handler:^(UIAlertAction * _Nonnull action) {
+        NSLog(@"Starting clean process");
+        NSLog(@"self.tableData=%@", self.tableData);
+        
+        [self.tableView.refreshControl beginRefreshing];
+        
+        for (NSDictionary* group in [self.tableData copy]) {
+            for (NSDictionary* item in [group[@"items"] copy]) {
+                if (![item[@"checked"] boolValue]) continue;
+                
+                NSLog(@"clean=%@", item);
+                
+                /*
+                NSString* backup = jbroot(@"/var/mobile/Library/RootHide/backup");
+                NSString* newpath = [backup stringByAppendingPathComponent:item[@"path"]];
+                NSString* dirpath = [newpath stringByDeletingLastPathComponent];
+                NSLog(@"newpath=%@, dirpath=%@", newpath, dirpath);
+                if(![NSFileManager.defaultManager fileExistsAtPath:dirpath])
+                    [NSFileManager.defaultManager createDirectoryAtPath:dirpath
+                                            withIntermediateDirectories:YES attributes:nil error:nil];
+                [NSFileManager.defaultManager copyItemAtPath:item[@"path"] toPath:newpath error:nil];
+                //*/
+                
+                NSError *err;
+                if (![NSFileManager.defaultManager removeItemAtPath:item[@"path"] error:&err]) {
+                    NSLog(@"clean failed=%@", err);
+                    continue;
+                }
 
-            
-            NSIndexPath* indexPath = [NSIndexPath indexPathForRow:[group[@"items"] indexOfObject:item]
-                                                        inSection:[self.tableData indexOfObject:group] ];
-            
-            [group[@"items"] removeObject:item]; //delete source data first
-            
-            NSLog(@"indexPath=%@", indexPath);
-            [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationLeft];
+                NSIndexPath *indexPath = [NSIndexPath indexPathForRow:[group[@"items"] indexOfObject:item]
+                                                            inSection:[self.tableData indexOfObject:group]];
+                
+                [group[@"items"] removeObject:item]; // Delete source data first
+                
+                NSLog(@"indexPath=%@", indexPath);
+                [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationLeft];
+            }
         }
-    }
+        
+        [self.tableView.refreshControl endRefreshing];
+        [self updateData];
+        [self.tableView reloadData];
+    }];
     
-    [self.tableView.refreshControl endRefreshing];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:Localized(@"Cancel")
+                                                           style:UIAlertActionStyleCancel
+                                                         handler:nil];
     
-    [self updateData];
-    [self.tableView reloadData];
+    [alertController addAction:confirmAction];
+    [alertController addAction:cancelAction];
+    
+    [self presentViewController:alertController animated:YES completion:nil];
 }
+
 
 #pragma mark - Table view data source
 
