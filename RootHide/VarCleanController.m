@@ -229,7 +229,7 @@
         }
     NSString *alertMessage = [NSString stringWithFormat:@"%@\n%@", Localized(@"Are you sure you want to clean selected items?"), deletionList];
     UIAlertController *alertController = [UIAlertController alertControllerWithTitle:Localized(@"Confirmation")
-                                                                             message:Localized:alertMessage
+                                                                             message:alertMessage
                                                                       preferredStyle:UIAlertControllerStyleAlert];
     
     UIAlertAction *confirmAction = [UIAlertAction actionWithTitle:Localized(@"Confirm")
