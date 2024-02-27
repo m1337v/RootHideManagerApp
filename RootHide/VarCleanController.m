@@ -218,6 +218,15 @@
 }
 
 - (void)varClean {
+    NSMutableString *deletionList = [NSMutableString stringWithString:Localized(@"You are about to delete the following items:\n")];
+
+        for (NSDictionary* group in self.tableData) {
+            for (NSDictionary* item in group[@"items"]) {
+                if ([item[@"checked"] boolValue]) {
+                    [deletionList appendFormat:@"%@\n", item[@"name"]];
+                }
+            }
+        }
     UIAlertController *alertController = [UIAlertController alertControllerWithTitle:Localized(@"Confirmation")
                                                                              message:Localized(@"Are you sure you want to clean selected items?")
                                                                       preferredStyle:UIAlertControllerStyleAlert];
