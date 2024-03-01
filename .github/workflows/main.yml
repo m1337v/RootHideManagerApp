@@ -62,7 +62,7 @@ jobs:
         with:
           files: varClean14.tipa
           tag_name: rootful
-          name: Rootful Release ${{ github.run_number }}
+          name: Rootful
           draft: false
           prerelease: true
         env:
