@@ -55,3 +55,15 @@ jobs:
         with:
           name: varClean15
           path: varClean15.tipa
+
+      - name: Create Release and Upload IPA (Rootless)
+        uses: softprops/action-gh-release@v1
+        if: success()
+        with:
+          files: varClean15.tipa
+          tag_name: rootless
+          name: Rootless Release ${{ github.run_number }}
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
