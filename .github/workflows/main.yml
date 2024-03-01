@@ -62,7 +62,7 @@ jobs:
         with:
           files: varClean15.tipa
           tag_name: rootless
-          name: Rootless Release ${{ github.run_number }}
+          name: Rootless Release
           draft: false
           prerelease: true
         env:
