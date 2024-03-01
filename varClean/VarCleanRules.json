@@ -159,7 +159,7 @@
 		]
 	},
 	"/var/root/Library/Preferences" : {
-        "default" : "blacklist",
+        "default" : "whitelist",
 		"whitelist":[
 			{"match":"regexp", "name":"^com\\.apple\\."},
 			{"match":"regexp", "name":"^systemgroup\\.com\\.apple\\."},
