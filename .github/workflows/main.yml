@@ -24,8 +24,8 @@ jobs:
 
       - name: Build .app with Xcode
         run: |
-          xcodebuild -project RootHide.xcodeproj \
-                     -scheme RootHide \
+          xcodebuild -project varClean.xcodeproj \
+                     -scheme varClean \
                      -configuration Release \
                      -sdk iphoneos \
                      -destination 'generic/platform=iOS' \
@@ -38,20 +38,20 @@ jobs:
       - name: Locate .app File and Prepare for Packaging
         run: |
           mkdir -p Payload
-          ROOT_HIDE_DIR=$(find /Users/runner/Library/Developer/Xcode/DerivedData/ -name 'RootHide-*' -type d -print | head -n 1)
-          APP_DIR="${ROOT_HIDE_DIR}/Build/Products/Release-iphoneos/RootHide.app"
+          ROOT_HIDE_DIR=$(find /Users/runner/Library/Developer/Xcode/DerivedData/ -name 'varClean-*' -type d -print | head -n 1)
+          APP_DIR="${ROOT_HIDE_DIR}/Build/Products/Release-iphoneos/varClean.app"
           cp -r "$APP_DIR" Payload/
 
       - name: Sign the .app with entitlements
         run: |
-          ldid -S./entitlements.plist Payload/RootHide.app/RootHide
+          ldid -S./entitlements.plist Payload/varClean.app/varClean
 
       - name: Re-package IPA after signing
         run: |
-          zip -r9 RootHide15.tipa Payload
+          zip -r9 varClean15.tipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v3
         with:
-          name: RootHide
-          path: RootHide15.tipa
+          name: varClean15
+          path: varClean15.tipa
