@@ -386,7 +386,7 @@
             ]
     },
     "/var/mobile/Library/Preferences" : {
-        "default" : "whitelist",
+        "default" : "blacklist",
         "whitelist":[
             {"match":"regexp", "name":"^com\\.apple\\."},
             {"match":"regexp", "name":"^systemgroup\\.com\\.apple\\."},
