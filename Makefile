@@ -3,12 +3,12 @@ TARGET = iphone:latest:15.0
 DEB_ARCH = iphoneos-arm64
 IPHONEOS_DEPLOYMENT_TARGET = 15.0
 
-INSTALL_TARGET_PROCESSES = RootHide
+INSTALL_TARGET_PROCESSES = varClean
 THEOS_PACKAGE_SCHEME = rootless
 include $(THEOS)/makefiles/common.mk
 
-XCODE_SCHEME = RootHide
-XCODEPROJ_NAME = RootHide
+XCODE_SCHEME = varClean
+XCODEPROJ_NAME = varClean
 
 XCODEFLAGS = MARKETING_VERSION=$(THEOS_PACKAGE_BASE_VERSION) \
 	IPHONEOS_DEPLOYMENT_TARGET="$(IPHONEOS_DEPLOYMENT_TARGET)" \
@@ -23,4 +23,4 @@ clean::
 	rm -rf ./packages/*
 
 after-install::
-	install.exec 'uiopen -b com.roothide.manager'
+	install.exec 'uiopen -b com.m1337.varclean'
