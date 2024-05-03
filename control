@@ -1,12 +1,12 @@
-Package: com.roothide.manager
-Name: RootHide Manager
-Version: 0.7
-Architecture: iphoneos-arm64
-Depends: firmware (>= 15.0)
-Description: Configuare RootHide's Features
-Maintainer: RootHide
-Author: RootHide
+Package: com.m1337.varclean
+Name: varClean (rootful)
+Depends: firmware (>= 14.0), firmware (<< 15.0)
+Description: varClean for rootful
+Maintainer: m1337
+Author: roothide
 Section: System
-Icon: 
-Depiction: https://github.com/RootHide/RootHideManagerApp
-Support: https://github.com/RootHide/RootHideManagerApp
+Icon: https://raw.githubusercontent.com/m1337v/RootHideManagerApp/rootful/varClean/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+Depiction: https://github.com/m1337v/RootHideManagerApp
+Support: https://github.com/m1337v/RootHideManagerApp
+Architecture: iphoneos-arm
+Version: 1.0
