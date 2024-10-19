@@ -1,5 +1,4 @@
 #import <UIKit/UIKit.h>
-#include "varClean.h"
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 

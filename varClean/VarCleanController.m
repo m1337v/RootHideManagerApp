@@ -115,25 +115,23 @@
             
             // customed default priority
             NSString* _default = customedRuleItem[@"default"];
-            
             if(!_default) _default = ruleItem[@"default"];
             
-            // blacklist priority
-            if([self checkFileInList:file List:blackList] || [self checkFileInList:file List:customedBlackList])
-            {
+            // Blacklist priority: items in blacklist should be checked
+            if ([self checkFileInList:file List:blackList] || [self checkFileInList:file List:customedBlackList]) {
                 checked = YES;
             }
-            else if([self checkFileInList:file List:whiteList] || [self checkFileInList:file List:customedWhiteList])
-            {
-                continue;
+            // Whitelist priority: items explicitly in the whitelist should not be shown (skip them)
+            else if ([self checkFileInList:file List:whiteList] || [self checkFileInList:file List:customedWhiteList]) {
+                continue;  // Skip the whitelisted items
             }
-            else if(_default && [_default isEqualToString:@"blacklist"])
-            {
+            // Default behavior for blacklisted items: show them and checked
+            else if (_default && [_default isEqualToString:@"blacklist"]) {
                 checked = YES;
             }
-            else if(_default && [_default isEqualToString:@"whitelist"])
-            {
-                continue;
+            // Default behavior for whitelisted items: show them but unchecked
+            else if (_default && [_default isEqualToString:@"whitelist"]) {
+                checked = NO;  // Keep unchecked but still show the item
             }
             else
             {
