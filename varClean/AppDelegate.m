@@ -54,6 +54,36 @@
     });
 }
 
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    __block int repeatCount=0;
+    [NSTimer scheduledTimerWithTimeInterval:0.1 repeats:YES block:^(NSTimer* timer) {
+        char* paths[][3] = {
+            {"","Library/Preferences",".plist"},
+            {"","Library/Application Support/Containers",""},
+            {"","Library/SplashBoard/Snapshots",""},
+            {"","Library/Caches",""},
+            {"","Library/Saved Application State",".savedState"},
+            {"","Library/WebKit",""},
+            {"","Library/Cookies",".binarycookies"},
+            {"","Library/HTTPStorages",""},
+        };
+        
+        for(int i=0; i<sizeof(paths)/sizeof(paths[0]); i++) {
+            char mobile[PATH_MAX];
+            snprintf(mobile,sizeof(mobile),"/var/mobile/%s/%s%s%s", paths[i][1], NSBundle.mainBundle.bundleIdentifier.UTF8String, paths[i][0], paths[i][2]);
+            if(access(mobile, F_OK)==0) {
+                [NSFileManager.defaultManager removeItemAtPath:@(mobile) error:nil];
+                NSLog(@"remove app file %s\n", mobile);
+            }
+        }
+        
+        repeatCount++;
+        if(repeatCount > 40) {
+            [timer invalidate];
+        }
+    }];
+}
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
     

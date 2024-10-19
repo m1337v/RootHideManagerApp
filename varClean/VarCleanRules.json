@@ -1,6 +1,7 @@
 {
 	"/var" : {
 		"whitelist":[
+			"jb",
 			".DocumentRevisions-V100",
 			".fseventsd",
 			".overprovisioning_file",
@@ -27,18 +28,18 @@
 			"empty",
 			"installd",
 			"log",
-            		"logs",
+            "logs",
 			"msgs",
 			"protected",
 			"select",
 			"wireless",
 			"dirs_cleaner",
-		        "dextcores",
-		        "staged_system_apps",
+		    "dextcores",
+		    "staged_system_apps",
+		    "internal",
 		],
 		"blacklist":[
-			"jb",
-            		"stash",
+            "stash",
 			"alternatives",
 			"ap",
 			"apt",
@@ -71,6 +72,7 @@
 			"zshenv",
 			"zshrc",
 			"master.passwd",
+			".keep_symlinks",
 		]
 	},
 	"/var/log" : {
@@ -105,13 +107,13 @@
 
 	"/var/root" : {
 		"whitelist":[
-		        "Library",
-		        ".bootstrapped",
-		        ".aks_migrate",
-		        ".aks_whitelist",
-		        ".mkb_seshat_health",
-		        ".obliterated",
-		        ".aks_allowlist",
+		    "Library",
+		    ".bootstrapped",
+		    ".aks_migrate",
+		    ".aks_whitelist",
+		    ".mkb_seshat_health",
+		    ".obliterated",
+		    ".aks_allowlist",
 		],
 		"blacklist":[
 			".bash_history",
@@ -128,7 +130,7 @@
 			"Preferences",
 			"USBRestricted",
 			"com.apple.wifianalyticsd",
-            		"Catacomb" //FaceID
+            "Catacomb" //FaceID
 		],
 	},
 	"/var/root/Library/Application Support" : {
@@ -146,7 +148,8 @@
 			"locationd",
 		],
 		"blacklist":[
-			"shshd"
+			"shshd",
+			"FilzaHelper",
 		]
 	},
 	"/var/root/Library/HTTPStorages" : {
@@ -182,12 +185,14 @@
 			"Downloads",
 			"Library",
 			"Media",
-			"MobileSoftwareUpdate"
+			"MobileSoftwareUpdate",
+			"tmp",
 		],
         "blacklist":[
             "log.txt",
             ".ekenablelogging",
             ".eksafemode",
+            "Serotonin.jp2",
         ]
 	},
     "/var/mobile/Documents" : {
@@ -346,34 +351,48 @@
 			"Intents",
 			"PowerUI",
 			"VoiceTrigger",
-		        "ConfigurationProfiles",
-		        "ProactiveInsights",
-		        "Carrier Bundle.bundle",
-		        "Carrier1Bundle.bundle",
-		        "PeopleSuggester",
-		        "News",
-		        ".locallized",
-		        "CloudStorage",
-		        "Finance",
-		        "Measure",
-		        "News",
-		        "Recordings",
-		        "ResponseKit",
-		        "Settings",
-		        "studentd",
-		        "VirtualCaptureCard",
-		        "Wallet",
-		        "AppleMediaServices",
-		        "IntelligencePlatform",
-		        "sessionkitd",
+		    "ConfigurationProfiles",
+		    "ProactiveInsights",
+		    "Carrier Bundle.bundle",
+		    "Carrier1Bundle.bundle",
+		    "PeopleSuggester",
+		    "News",
+		    ".locallized",
+		    "CloudStorage",
+		    "Finance",
+		    "Measure",
+		    "News",
+		    "Recordings",
+		    "ResponseKit",
+		    "Settings",
+		    "studentd",
+		    "VirtualCaptureCard",
+		    "Wallet",
+		    "AppleMediaServices",
+		    "IntelligencePlatform",
+		    "sessionkitd",
+            "LiveFiles",
+            "Maps",
+            "OSIntelligence",
+            "Phone",
+            "Seymour",
 		],
 		"blacklist":[
 			"Sileo",
 			"Filza",
 			"Flex3",
 			"SBSettings",
+			"iCleaner",
 		]
 	},
+    "/var/mobile/Library/Logs" : {
+        "default" : "whitelist",
+        "whitelist":[
+        ],
+        "blacklist":[
+            "Cydia"
+        ]
+    },
     "/var/mobile/Library/UserConfigurationProfiles/PublicInfo/" : {
             "whitelist":[
                 "MCMeta.plist",
@@ -386,7 +405,7 @@
             ]
     },
     "/var/mobile/Library/Preferences" : {
-        "default" : "blacklist",
+        "default" : "whitelist",
         "whitelist":[
             {"match":"regexp", "name":"^com\\.apple\\."},
             {"match":"regexp", "name":"^systemgroup\\.com\\.apple\\."},
@@ -450,7 +469,7 @@
 		"blacklist":[
 			"xyz.willy.Zebra",
 			"com.tigisoftware.Filza",
-            		"org.coolstar.SileoStore",
+            "org.coolstar.SileoStore",
 		]
 	},
 	"/var/mobile/Library/SplashBoard/Snapshots" : {
@@ -564,18 +583,18 @@
             {"match":"regexp", "name":"^SOSBackup-.*-tomb"},
             {"match":"regexp", "name":"^CFNetworkDownload_"},
             {"match":"regexp", "name":"^NSIRD_installd_"},
-		        ".LINKS",
-		        "MediaCache",
-		        "analytics",
-		        "aud",
-		        "ct.shutdown",
-		        "fseventsd-uuid",
-		        "hdds6.dat",
-		        "nfcd.firstlaunch",
-		        "powerlog",
-		        "recommendations",
-		        "journeys",
-		        "ClonedAXAsset",
+		    ".LINKS",
+		    "MediaCache",
+		    "analytics",
+		    "aud",
+		    "ct.shutdown",
+		    "fseventsd-uuid",
+		    "hdds6.dat",
+		    "nfcd.firstlaunch",
+		    "powerlog",
+		    "recommendations",
+		    "journeys",
+		    "ClonedAXAsset",
         ],
         "blacklist":[
         ]
