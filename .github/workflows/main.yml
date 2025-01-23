@@ -64,6 +64,6 @@ jobs:
           tag_name: rootless
           name: Rootless
           draft: false
-          prerelease: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
