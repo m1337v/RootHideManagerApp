@@ -51,7 +51,7 @@ jobs:
           zip -r9 varClean15.tipa Payload
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: varClean15
           path: varClean15.tipa
