@@ -497,6 +497,7 @@
         ],
         "blacklist":[
             "com.roothide.manager.plist",
+            "com.m1337v.varclean.plist",
             "com.opa334.Dopamine.roothide.plist",
             "com.opa334.Dopamine.plist",
             "com.tigisoftware.Filza.plist",
@@ -547,6 +548,7 @@
 		],
 		"blacklist":[
 			"com.roothide.manager",
+			"com.m1337v.varclean",
 			"com.opa334.Dopamine.roothide",
 			"com.opa334.Dopamine",
 			"com.tigisoftware.Filza",
@@ -606,6 +608,7 @@
 			{"match":"regexp", "name":"^com\\.apple\\."},
 		],
 		"blacklist":[
+			"com.m1337v.varclean.savedState",
 			"com.opa334.Dopamine.savedState",
 			"com.tigisoftware.Filza.savedState",
 			"org.coolstar.SileoStore.savedState",

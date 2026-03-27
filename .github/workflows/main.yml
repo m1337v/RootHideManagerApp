@@ -1,4 +1,4 @@
-name: Build and Package Rootless
+name: Build and Package
 
 on:
   push:
@@ -10,8 +10,28 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Rootless
+            deployment_target: "15.0"
+            rules_override_basename: ""
+            artifact_name: varClean15
+            artifact_file: varClean15.tipa
+            release_tag: rootless
+            release_name: Rootless
+            prerelease: false
+          - name: Rootful
+            deployment_target: "14.0"
+            rules_override_basename: varCleanRules_rootful_overrides
+            artifact_name: varClean14
+            artifact_file: varClean14.tipa
+            release_tag: rootful
+            release_name: Rootful
+            prerelease: true
     env:
-      DERIVED_DATA: ${{ github.workspace }}/.derivedData
+      DERIVED_DATA: ${{ github.workspace }}/.derivedData-${{ matrix.release_tag }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -24,16 +44,17 @@ jobs:
       - name: Install ldid
         run: brew install ldid
 
-      - name: Build .app with Xcode
+      - name: Build ${{ matrix.name }} .app with Xcode
         run: |
-          rm -rf "$DERIVED_DATA" Payload varClean15.tipa
+          rm -rf "$DERIVED_DATA" Payload "${{ matrix.artifact_file }}"
           xcodebuild -project varClean.xcodeproj \
                      -scheme varClean \
                      -configuration Release \
                      -sdk iphoneos \
                      -destination 'generic/platform=iOS' \
                      -derivedDataPath "$DERIVED_DATA" \
-                     IPHONEOS_DEPLOYMENT_TARGET=15.0 \
+                     IPHONEOS_DEPLOYMENT_TARGET=${{ matrix.deployment_target }} \
+                     VARCLEAN_RULES_OVERRIDE_BASENAME=${{ matrix.rules_override_basename }} \
                      CODE_SIGN_IDENTITY="" \
                      AD_HOC_CODE_SIGNING_ALLOWED=YES \
                      build
@@ -50,22 +71,22 @@ jobs:
 
       - name: Re-package IPA after signing
         run: |
-          zip -r9 varClean15.tipa Payload
+          zip -r9 "${{ matrix.artifact_file }}" Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: varClean15
-          path: varClean15.tipa
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_file }}
 
-      - name: Create Release and Upload IPA (Rootless)
+      - name: Create Release and Upload IPA (${{ matrix.name }})
         uses: softprops/action-gh-release@v1
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         with:
-          files: varClean15.tipa
-          tag_name: rootless
-          name: Rootless
+          files: ${{ matrix.artifact_file }}
+          tag_name: ${{ matrix.release_tag }}
+          name: ${{ matrix.release_name }}
           draft: false
-          prerelease: false
+          prerelease: ${{ matrix.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

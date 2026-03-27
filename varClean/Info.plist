@@ -12,5 +12,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>VarCleanRulesBasename</key>
+	<string>$(VARCLEAN_RULES_BASENAME)</string>
+	<key>VarCleanRulesOverrideBasename</key>
+	<string>$(VARCLEAN_RULES_OVERRIDE_BASENAME)</string>
 </dict>
 </plist>

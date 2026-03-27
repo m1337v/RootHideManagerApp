@@ -10,6 +10,7 @@
 		8477B5E22A7526AB000632D0 /* NSJSONSerialization+Comments.m in Sources */ = {isa = PBXBuildFile; fileRef = 8477B5E02A7526AB000632D0 /* NSJSONSerialization+Comments.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		8477B6052A866437000632D0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 8477B6072A866437000632D0 /* Localizable.strings */; };
 		84BBFAC92A7420100054A68E /* varCleanRules.json in Resources */ = {isa = PBXBuildFile; fileRef = 84BBFAC72A741C800054A68E /* varCleanRules.json */; };
+		84D58B842BF3C97700EF71CA /* varCleanRules_rootful_overrides.json in Resources */ = {isa = PBXBuildFile; fileRef = 84D58B832BF3C97700EF71CA /* varCleanRules_rootful_overrides.json */; };
 		A672ABB427F748DE00878787 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = A672ABB327F748DE00878787 /* AppDelegate.m */; };
 		A672ABBF27F748E100878787 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A672ABBE27F748E100878787 /* Assets.xcassets */; };
 		A672ABC527F748E100878787 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A672ABC427F748E100878787 /* main.m */; };
@@ -31,6 +32,7 @@
 		8477B6092A8668AF000632D0 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8477B60A2A866CBA000632D0 /* entitlements.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = entitlements.plist; sourceTree = "<group>"; };
 		84BBFAC72A741C800054A68E /* varCleanRules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = varCleanRules.json; sourceTree = "<group>"; };
+		84D58B832BF3C97700EF71CA /* varCleanRules_rootful_overrides.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = varCleanRules_rootful_overrides.json; sourceTree = "<group>"; };
 		A672ABAF27F748DE00878787 /* varClean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = varClean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A672ABB227F748DE00878787 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		A672ABB327F748DE00878787 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -90,6 +92,7 @@
 				BFD8B9712A4BD68D007CCEB8 /* SettingViewController.h */,
 				BFD8B9722A4BD68D007CCEB8 /* SettingViewController.m */,
 				84BBFAC72A741C800054A68E /* varCleanRules.json */,
+				84D58B832BF3C97700EF71CA /* varCleanRules_rootful_overrides.json */,
 				A672ABC427F748E100878787 /* main.m */,
 				A672ABBE27F748E100878787 /* Assets.xcassets */,
 				A672ABC327F748E100878787 /* Info.plist */,
@@ -182,6 +185,7 @@
 				A672ABBF27F748E100878787 /* Assets.xcassets in Resources */,
 				8477B6052A866437000632D0 /* Localizable.strings in Resources */,
 				84BBFAC92A7420100054A68E /* varCleanRules.json in Resources */,
+				84D58B842BF3C97700EF71CA /* varCleanRules_rootful_overrides.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,6 +370,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)";
+				VARCLEAN_RULES_BASENAME = varCleanRules;
+				VARCLEAN_RULES_OVERRIDE_BASENAME = "";
 			};
 			name = Debug;
 		};
@@ -402,6 +408,8 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)";
+				VARCLEAN_RULES_BASENAME = varCleanRules;
+				VARCLEAN_RULES_OVERRIDE_BASENAME = "";
 			};
 			name = Release;
 		};

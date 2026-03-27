@@ -12,6 +12,114 @@
     return VCConfigPath(fileName);
 }
 
++ (NSString *)infoStringForKey:(NSString *)key fallback:(NSString *)fallback {
+    id value = [NSBundle.mainBundle objectForInfoDictionaryKey:key];
+    if ([value isKindOfClass:NSString.class] && [(NSString *)value length] > 0) {
+        return value;
+    }
+    return fallback;
+}
+
++ (NSDictionary *)rulesDictionaryForResource:(NSString *)resourceName {
+    if (resourceName.length == 0) {
+        return nil;
+    }
+
+    NSString *jsonPath = [NSBundle.mainBundle pathForResource:resourceName ofType:@"json"];
+    assert(jsonPath != nil);
+
+    NSData *jsonData = [NSData dataWithContentsOfFile:jsonPath];
+    assert(jsonData != nil);
+
+    NSError *error = nil;
+    NSDictionary *rules = [NSJSONSerialization JSONObjectWithCommentedData:jsonData
+                                                                   options:NSJSONReadingMutableContainers
+                                                                     error:&error];
+    if (error) {
+        NSLog(@"json error loading %@: %@", resourceName, error);
+    }
+    assert(rules != nil);
+    return rules;
+}
+
++ (NSDictionary *)mergedRulesWithBaseRules:(NSDictionary *)baseRules overrides:(NSDictionary *)overrides {
+    NSMutableDictionary *mergedRules = [NSMutableDictionary dictionaryWithDictionary:baseRules ?: @{}];
+
+    [overrides enumerateKeysAndObjectsUsingBlock:^(NSString *path, id overrideValue, BOOL *stop) {
+        if (![overrideValue isKindOfClass:NSDictionary.class]) {
+            if (overrideValue == NSNull.null) {
+                [mergedRules removeObjectForKey:path];
+            } else if (overrideValue) {
+                mergedRules[path] = overrideValue;
+            }
+            return;
+        }
+
+        NSDictionary *overrideSection = (NSDictionary *)overrideValue;
+        if ([overrideSection[@"_remove"] boolValue]) {
+            [mergedRules removeObjectForKey:path];
+            return;
+        }
+
+        NSMutableDictionary *mergedSection = [NSMutableDictionary dictionary];
+        NSDictionary *baseSection = mergedRules[path];
+        if ([baseSection isKindOfClass:NSDictionary.class]) {
+            [mergedSection addEntriesFromDictionary:baseSection];
+        }
+
+        for (NSString *listKey in @[@"whitelist", @"blacklist"]) {
+            NSString *addKey = [listKey stringByAppendingString:@"_add"];
+            NSString *removeKey = [listKey stringByAppendingString:@"_remove"];
+            NSArray *additions = overrideSection[addKey];
+            NSArray *removals = overrideSection[removeKey];
+            if (![additions isKindOfClass:NSArray.class] && ![removals isKindOfClass:NSArray.class]) {
+                continue;
+            }
+
+            NSMutableArray *mergedList = [NSMutableArray array];
+            NSArray *baseList = mergedSection[listKey];
+            if ([baseList isKindOfClass:NSArray.class]) {
+                [mergedList addObjectsFromArray:baseList];
+            }
+
+            for (id item in removals ?: @[]) {
+                [mergedList removeObject:item];
+            }
+            for (id item in additions ?: @[]) {
+                if (![mergedList containsObject:item]) {
+                    [mergedList addObject:item];
+                }
+            }
+            mergedSection[listKey] = mergedList;
+        }
+
+        for (NSString *key in overrideSection) {
+            if ([key isEqualToString:@"_remove"] ||
+                [key hasSuffix:@"_add"] ||
+                [key hasSuffix:@"_remove"]) {
+                continue;
+            }
+            mergedSection[key] = overrideSection[key];
+        }
+
+        mergedRules[path] = mergedSection;
+    }];
+
+    return mergedRules;
+}
+
++ (NSDictionary *)defaultRules {
+    NSDictionary *baseRules = [self rulesDictionaryForResource:[self infoStringForKey:@"VarCleanRulesBasename"
+                                                                             fallback:@"varCleanRules"]];
+    NSString *overrideResource = [self infoStringForKey:@"VarCleanRulesOverrideBasename" fallback:nil];
+    if (overrideResource.length == 0) {
+        return baseRules;
+    }
+
+    NSDictionary *overrideRules = [self rulesDictionaryForResource:overrideResource];
+    return [self mergedRulesWithBaseRules:baseRules overrides:overrideRules];
+}
+
 + (id)getDefaultsForKey:(NSString*)key {
     NSDictionary *defaults = [NSDictionary dictionaryWithContentsOfFile:[self configPathForFile:@"varCleanConfig.plist"]];
     return defaults[key];
@@ -140,17 +248,8 @@
                                                              error:nil]);
     }
 
-    NSString *jsonPath = [NSBundle.mainBundle pathForResource:@"varCleanRules" ofType:@"json"];
-    NSData *jsonData = [NSData dataWithContentsOfFile:jsonPath];
-    assert(jsonData != NULL);
-
-    NSError *error = nil;
-    NSDictionary *rules = [NSJSONSerialization JSONObjectWithCommentedData:jsonData
-                                                                   options:NSJSONReadingMutableContainers
-                                                                     error:&error];
-    if (error) {
-        NSLog(@"json error=%@", error);
-    }
+    // Build variants only swap rule overlays. The runtime stays shared.
+    NSDictionary *rules = [AppDelegate defaultRules];
     assert(rules != NULL);
 
     NSString *rulesFilePath = [AppDelegate configPathForFile:@"varCleanRules.plist"];

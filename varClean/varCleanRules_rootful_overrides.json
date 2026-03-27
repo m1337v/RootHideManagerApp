@@ -1,0 +1,30 @@
+{
+    // Keep the rootful delta minimal so future upstream rule merges stay cheap.
+    "/var": {
+        "whitelist_add": [
+            "jb",
+        ],
+        "blacklist_remove": [
+            "jb",
+        ]
+    },
+
+    "/var/root": {
+        "blacklist_remove": [
+            ".config",
+            ".local",
+        ]
+    },
+
+    "/var/root/Library/Preferences": {
+        "default": "whitelist"
+    },
+
+    "/var/mobile/Media": {
+        "_remove": true
+    },
+
+    "/var/mobile/Library/Preferences": {
+        "default": "whitelist"
+    }
+}
