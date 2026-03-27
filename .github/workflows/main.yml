@@ -10,9 +10,11 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      DERIVED_DATA: ${{ github.workspace }}/.derivedData
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -24,12 +26,13 @@ jobs:
 
       - name: Build .app with Xcode
         run: |
+          rm -rf "$DERIVED_DATA" Payload varClean15.tipa
           xcodebuild -project varClean.xcodeproj \
                      -scheme varClean \
                      -configuration Release \
                      -sdk iphoneos \
                      -destination 'generic/platform=iOS' \
-                     MARKETING_VERSION=$THEOS_PACKAGE_BASE_VERSION \
+                     -derivedDataPath "$DERIVED_DATA" \
                      IPHONEOS_DEPLOYMENT_TARGET=15.0 \
                      CODE_SIGN_IDENTITY="" \
                      AD_HOC_CODE_SIGNING_ALLOWED=YES \
@@ -38,8 +41,7 @@ jobs:
       - name: Locate .app File and Prepare for Packaging
         run: |
           mkdir -p Payload
-          ROOT_HIDE_DIR=$(find /Users/runner/Library/Developer/Xcode/DerivedData/ -name 'varClean-*' -type d -print | head -n 1)
-          APP_DIR="${ROOT_HIDE_DIR}/Build/Products/Release-iphoneos/varClean.app"
+          APP_DIR="${DERIVED_DATA}/Build/Products/Release-iphoneos/varClean.app"
           cp -r "$APP_DIR" Payload/
 
       - name: Sign the .app with entitlements
