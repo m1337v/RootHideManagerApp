@@ -1,7 +1,6 @@
 {
 	"/var" : {
 		"whitelist":[
-			"jb",
 			".DocumentRevisions-V100",
 			".fseventsd",
 			".overprovisioning_file",
@@ -40,6 +39,7 @@
             "iomfb_bics_daemon",
 		],
 		"blacklist":[
+			"jb",
             "stash",
 			"alternatives",
 			"ap",
@@ -78,7 +78,8 @@
             "testrebuild", //com.ui.speed.tipa
 		]
 	},
-	"/var/log" : {
+    
+    "/var/log" : {
         "default" : "blacklist",
 		"whitelist":[
 			{"match":"regexp", "name":"^com\\.apple\\."},
@@ -89,7 +90,7 @@
 		"blacklist":[
 		]
 	},
-	
+    
 	"/var/containers" : {
 		"whitelist":[
 			"Bundle",
@@ -168,7 +169,7 @@
 		]
 	},
 	"/var/root/Library/Preferences" : {
-        "default" : "whitelist",
+        "default" : "blacklist",
 		"whitelist":[
 			{"match":"regexp", "name":"^com\\.apple\\."},
 			{"match":"regexp", "name":"^systemgroup\\.com\\.apple\\."},
@@ -467,7 +468,7 @@
             ]
     },
     "/var/mobile/Library/Preferences" : {
-        "default" : "whitelist",
+        "default" : "blacklist",
         "whitelist":[
             {"match":"regexp", "name":"^com\\.apple\\."},
             {"match":"regexp", "name":"^systemgroup\\.com\\.apple\\."},
@@ -493,9 +494,8 @@
             "ptpcamerad.plist",
             "com.google.gmp.measurement.monitor.plist",
             "com.google.gmp.measurement.plist",
-		],
-		"blacklist":[
-            "com.m1337v.varclean.plist",
+        ],
+        "blacklist":[
             "com.roothide.manager.plist",
             "com.opa334.Dopamine.roothide.plist",
             "com.opa334.Dopamine.plist",
@@ -547,7 +547,6 @@
 		],
 		"blacklist":[
 			"com.roothide.manager",
-            "com.m1337v.varclean",
 			"com.opa334.Dopamine.roothide",
 			"com.opa334.Dopamine",
 			"com.tigisoftware.Filza",
@@ -692,5 +691,5 @@
             {"match":"regexp", "name":"^exec-"},
             "exec",
         ]
-    }
+    },
 }
