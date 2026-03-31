@@ -3,7 +3,7 @@ TARGET = iphone:latest:15.0
 DEB_ARCH = iphoneos-arm64e
 IPHONEOS_DEPLOYMENT_TARGET = 15.0
 
-INSTALL_TARGET_PROCESSES = RootHide
+INSTALL_TARGET_PROCESSES = RHInject
 
 THEOS_PACKAGE_SCHEME = roothide
 
@@ -33,7 +33,7 @@ clean::
 	rm -rf ./packages/*
 
 before-package::
-	ldid -M -S./nickchan.entitlements $(THEOS_STAGING_DIR)/Applications/RootHide.app/RootHide
+	ldid -M -S./nickchan.entitlements $(THEOS_STAGING_DIR)/Applications/RHInject.app/RHInject
 
 after-install::
-	install.exec 'uiopen -b com.roothide.manager'
+	install.exec 'uiopen -b m1337.rhinject'

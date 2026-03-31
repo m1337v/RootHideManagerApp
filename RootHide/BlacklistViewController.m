@@ -83,7 +83,7 @@ BOOL isDefaultInstallationPath(NSString* path)
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tableView.tableFooterView = [[UIView alloc] init];
     
-    [self setTitle:Localized(@"Blacklist")];
+    [self setTitle:Localized(@"Classic RootHide")];
     
     self->blacklistDisabled = [[AppDelegate getDefaultsForKey:@"blacklistDisabled"] boolValue];
     self->spinlockFixApplied = [[AppDelegate getDefaultsForKey:@"spinlockFixApplied"] boolValue];
@@ -224,14 +224,16 @@ BOOL isDefaultInstallationPath(NSString* path)
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return @"Applist";
+    (void)tableView;
+    (void)section;
+    return Localized(@"Classic Hidden Apps");
 }
 
-- (nullable UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-    return [[UIView alloc] init];
-}
-- (nullable UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
-    return [[UIView alloc] init];
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    return Localized(@"Manage the stock RootHide hidden-app list from RootHideConfig.plist. Enabled apps stay on the classic hide path and remain separate from RHInject whitelist and blacklist injection rules.");
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {

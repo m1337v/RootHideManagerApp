@@ -8,12 +8,86 @@
 #include <zlib.h>
 #include <spawn.h>
 #include <sys/mount.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <IOKit/IOKitLib.h>
 
+NSString * const RHInjectSettingsChangedNotification = @"m1337.rhinject.settingsChanged";
+
+static NSString * const RHRootHideDirectoryRelativePath = @"/var/mobile/Library/RootHide";
+static NSString * const RHRootHideModeRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.mode.plist";
+static NSString * const RHRootHideInjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.plist";
+static NSString * const RHRootHideInjectSystemRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.system.plist";
+static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.wantsblacklist.plist";
+static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.jetsam.addend.plist";
+static NSString * const RHRootHideUninjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.uninject.plist";
+static NSString * const RHRootHideLegacyUninjectPath = @"/var/mobile/zp.unject.plist";
+
+static NSString *RootHideNormalizeInjectionMode(NSString *mode)
+{
+    if ([mode isEqualToString:@"stock"] || [mode isEqualToString:@"blacklist"] || [mode isEqualToString:@"whitelist"]) {
+        return mode;
+    }
+    return nil;
+}
+
+static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
+{
+    NSMutableArray<NSString *> *paths = [NSMutableArray array];
+    NSString *jbrootPath = jbroot(relativePath);
+    if (jbrootPath.length > 0) {
+        [paths addObject:jbrootPath];
+    }
+    if (relativePath.length > 0 && ![paths containsObject:relativePath]) {
+        [paths addObject:relativePath];
+    }
+    if ([relativePath isEqualToString:RHRootHideUninjectRelativePath] && ![paths containsObject:RHRootHideLegacyUninjectPath]) {
+        [paths addObject:RHRootHideLegacyUninjectPath];
+    }
+    return paths;
+}
+
 @implementation AppDelegate
+
+- (UITabBarController *)rootTabBarController
+{
+    if ([self.window.rootViewController isKindOfClass:[UITabBarController class]]) {
+        return (UITabBarController *)self.window.rootViewController;
+    }
+    return nil;
+}
+
+- (void)updateInjectionModeTabs
+{
+    UITabBarController *tabBarController = [self rootTabBarController];
+    if (![tabBarController.viewControllers isKindOfClass:[NSArray class]] || tabBarController.viewControllers.count < 5) {
+        return;
+    }
+
+    UINavigationController *whitelistNavigationController = tabBarController.viewControllers[1];
+    UINavigationController *blacklistNavigationController = tabBarController.viewControllers[2];
+
+    NSString *mode = AppDelegate.rootHideInjectionMode;
+    BOOL whitelistEnabled = ![mode isEqualToString:@"blacklist"];
+    BOOL blacklistEnabled = ![mode isEqualToString:@"whitelist"];
+
+    whitelistNavigationController.tabBarItem.enabled = whitelistEnabled;
+    blacklistNavigationController.tabBarItem.enabled = blacklistEnabled;
+
+    UIViewController *selectedController = tabBarController.selectedViewController;
+    if ((!whitelistEnabled && selectedController == whitelistNavigationController)
+        || (!blacklistEnabled && selectedController == blacklistNavigationController)) {
+        tabBarController.selectedIndex = 4;
+    }
+}
+
+- (void)handleRHInjectSettingsChanged:(NSNotification *)notification
+{
+    (void)notification;
+    [self updateInjectionModeTabs];
+}
 
 + (id)getDefaultsForKey:(NSString*)key {
     NSString *configFilePath = jbroot(@"/var/mobile/Library/RootHide/RootHideConfig.plist");
@@ -27,6 +101,216 @@
     if(!defaults) defaults = [[NSMutableDictionary alloc] init];
     [defaults setValue:value forKey:key];
     [defaults writeToFile:configFilePath atomically:YES];
+}
+
++ (NSString *)rootHideInjectionMode
+{
+    NSDictionary *modeConfiguration = [NSDictionary dictionaryWithContentsOfFile:[self rootHidePathForRelativePath:RHRootHideModeRelativePath]];
+    NSString *configuredMode = RootHideNormalizeInjectionMode(modeConfiguration[@"mode"]);
+    if (configuredMode) {
+        return configuredMode;
+    }
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self rootHidePathForRelativePath:RHRootHideInjectRelativePath]]) {
+        return @"whitelist";
+    }
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self rootHidePathForRelativePath:RHRootHideUninjectRelativePath]]
+        || [[NSFileManager defaultManager] fileExistsAtPath:RHRootHideLegacyUninjectPath]) {
+        return @"blacklist";
+    }
+
+    return @"stock";
+}
+
++ (NSString *)rootHidePathForRelativePath:(NSString *)relativePath
+{
+    NSString *path = jbroot(relativePath);
+    return path.length > 0 ? path : relativePath;
+}
+
++ (void)ensureRootHideDirectoryExists
+{
+    NSString *rootHidePath = [self rootHidePathForRelativePath:RHRootHideDirectoryRelativePath];
+    NSDictionary *directoryAttributes = @{
+        NSFilePosixPermissions : @(0755),
+        NSFileOwnerAccountID : @(501),
+        NSFileGroupOwnerAccountID : @(501),
+    };
+    if (![[NSFileManager defaultManager] fileExistsAtPath:rootHidePath]) {
+        [[NSFileManager defaultManager] createDirectoryAtPath:rootHidePath withIntermediateDirectories:YES attributes:directoryAttributes error:nil];
+    }
+    [[NSFileManager defaultManager] setAttributes:directoryAttributes ofItemAtPath:rootHidePath error:nil];
+}
+
++ (NSMutableDictionary *)rootHideDictionaryForRelativePath:(NSString *)relativePath
+                                             createIfNeeded:(BOOL)createIfNeeded
+                                                   defaults:(NSDictionary *)defaults
+{
+    NSMutableDictionary *dictionary = nil;
+    NSString *resolvedPath = [self rootHidePathForRelativePath:relativePath];
+
+    for (NSString *candidatePath in RootHideCandidatePaths(relativePath)) {
+        NSDictionary *loadedDictionary = [NSDictionary dictionaryWithContentsOfFile:candidatePath];
+        if ([loadedDictionary isKindOfClass:[NSDictionary class]]) {
+            dictionary = [loadedDictionary mutableCopy];
+            break;
+        }
+    }
+
+    if (!dictionary) {
+        dictionary = [NSMutableDictionary dictionary];
+    }
+
+    BOOL changed = NO;
+    if (defaults.count > 0) {
+        for (NSString *key in defaults) {
+            if (!dictionary[key]) {
+                dictionary[key] = defaults[key];
+                changed = YES;
+            }
+        }
+    }
+
+    if (createIfNeeded && (![[NSFileManager defaultManager] fileExistsAtPath:resolvedPath] || changed)) {
+        [self writeRootHideDictionary:dictionary toRelativePath:relativePath];
+    }
+
+    return dictionary;
+}
+
++ (void)writeRootHideDictionary:(NSDictionary *)dictionary toRelativePath:(NSString *)relativePath
+{
+    [self ensureRootHideDirectoryExists];
+
+    NSString *resolvedPath = [self rootHidePathForRelativePath:relativePath];
+    NSDictionary *fileAttributes = @{
+        NSFilePosixPermissions : @(0644),
+        NSFileOwnerAccountID : @(501),
+        NSFileGroupOwnerAccountID : @(501),
+    };
+
+    NSDictionary *safeDictionary = dictionary ?: @{};
+    [safeDictionary writeToFile:resolvedPath atomically:YES];
+    [[NSFileManager defaultManager] setAttributes:fileAttributes ofItemAtPath:resolvedPath error:nil];
+
+    if ([relativePath isEqualToString:RHRootHideUninjectRelativePath]) {
+        [safeDictionary writeToFile:RHRootHideLegacyUninjectPath atomically:YES];
+        [[NSFileManager defaultManager] setAttributes:fileAttributes ofItemAtPath:RHRootHideLegacyUninjectPath error:nil];
+    }
+}
+
++ (void)setRootHideInjectionMode:(NSString *)mode
+{
+    NSString *normalizedMode = RootHideNormalizeInjectionMode(mode) ?: @"stock";
+    [self writeRootHideDictionary:@{ @"mode" : normalizedMode } toRelativePath:RHRootHideModeRelativePath];
+    [self ensureInjectionModeSupportFiles];
+}
+
++ (NSString *)activeInjectionRulesRelativePath
+{
+    NSString *mode = self.rootHideInjectionMode;
+    if ([mode isEqualToString:@"whitelist"]) {
+        return RHRootHideInjectRelativePath;
+    }
+    if ([mode isEqualToString:@"blacklist"]) {
+        return RHRootHideUninjectRelativePath;
+    }
+    return nil;
+}
+
++ (NSDictionary *)defaultSystemInjection
+{
+    static NSDictionary *defaultSystemInjection;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        defaultSystemInjection = @{
+            @"/.jbroot" : @YES,
+            @"/xpcproxy" : @YES,
+            @"/Dopamine" : @YES,
+            @"/SpringBoard" : @YES,
+            @"/Preferences" : @YES,
+            @"/amfid" : @YES,
+            @"/cfprefsd" : @YES,
+            @"/lsd" : @YES,
+            @"/transitd" : @YES,
+            @"/watchdogd" : @YES,
+            @"/SafariViewService" : @YES,
+            @"/iconservicesagent" : @YES,
+            @"/mobileassetd" : @YES,
+            @"/MobileGestaltHelper" : @YES,
+            @"/useractivityd" : @YES,
+        };
+    });
+    return defaultSystemInjection;
+}
+
++ (NSDictionary *)defaultWantsBlacklist
+{
+    static NSDictionary *defaultWantsBlacklist;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        defaultWantsBlacklist = @{
+            @"QQ" : @YES,
+            @"WeChat" : @YES,
+            @"Runner" : @YES,
+            @"AppStore" : @YES,
+        };
+    });
+    return defaultWantsBlacklist;
+}
+
++ (NSDictionary *)defaultJetsamAddend
+{
+    static NSDictionary *defaultJetsamAddend;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        defaultJetsamAddend = @{
+            @"/SpringBoard" : @(239),
+            @"/xxtouch" : @(48),
+            @"/thermalmonitord" : @(16),
+            @"/snapper3ocrd" : @(16),
+        };
+    });
+    return defaultJetsamAddend;
+}
+
++ (void)ensureInjectionModeSupportFiles
+{
+    NSString *mode = self.rootHideInjectionMode;
+    [self rootHideDictionaryForRelativePath:RHRootHideJetsamAddendRelativePath createIfNeeded:YES defaults:[self defaultJetsamAddend]];
+    if ([mode isEqualToString:@"whitelist"]) {
+        [self rootHideDictionaryForRelativePath:RHRootHideInjectRelativePath createIfNeeded:YES defaults:@{}];
+        [self rootHideDictionaryForRelativePath:RHRootHideInjectSystemRelativePath createIfNeeded:YES defaults:[self defaultSystemInjection]];
+        [self rootHideDictionaryForRelativePath:RHRootHideInjectWantsBlacklistRelativePath createIfNeeded:YES defaults:[self defaultWantsBlacklist]];
+    }
+    else if ([mode isEqualToString:@"blacklist"]) {
+        [self rootHideDictionaryForRelativePath:RHRootHideUninjectRelativePath createIfNeeded:YES defaults:@{}];
+    }
+}
+
++ (void)rebootUserspace
+{
+    NSString *jbctlPath = jbroot(@"/basebin/jbctl");
+    if (jbctlPath.length == 0 || ![[NSFileManager defaultManager] isExecutableFileAtPath:jbctlPath]) {
+        [self showMessage:Localized(@"jbctl not found") title:Localized(@"Error")];
+        return;
+    }
+
+    pid_t pid = 0;
+    char *argv[] = {
+        (char *)jbctlPath.fileSystemRepresentation,
+        "reboot_userspace",
+        NULL,
+    };
+    int spawnResult = posix_spawn(&pid, argv[0], NULL, NULL, argv, NULL);
+    if (spawnResult == 0 && pid > 0) {
+        kill(pid, SIGCONT);
+        waitpid(pid, NULL, 0);
+    }
+    else {
+        [self showMessage:[NSString stringWithFormat:@"%@ (%d)", Localized(@"Failed to start userspace reboot"), spawnResult] title:Localized(@"Error")];
+    }
 }
 
 + (void)showAlert:(UIAlertController*)alert {
@@ -111,6 +395,7 @@
         NSDictionary* attr = @{NSFilePosixPermissions:@(0755), NSFileOwnerAccountID:@(501), NSFileGroupOwnerAccountID:@(501)};
         assert([NSFileManager.defaultManager createDirectoryAtPath:roothideDir withIntermediateDirectories:YES attributes:attr error:nil]);
     }
+    [AppDelegate ensureInjectionModeSupportFiles];
     
     NSString* jsonPath = [NSBundle.mainBundle pathForResource:@"varCleanRules" ofType:@"json"];
     NSLog(@"jsonPath=%@", jsonPath);
@@ -144,28 +429,42 @@
     [self.window makeKeyAndVisible];
     
     BlacklistViewController *listController = [BlacklistViewController sharedInstance];
+    UIViewController *whitelistController = [SettingViewController whitelistController];
+    UIViewController *blacklistController = [SettingViewController blacklistController];
     varCleanController *cleanController = [varCleanController sharedInstance];
     SettingViewController *setController = [SettingViewController sharedInstance];
     
     
-    listController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Blacklist",@"") image:[UIImage systemImageNamed:@"list.bullet.circle"] tag:0];
-    cleanController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"varClean",@"") image:[UIImage systemImageNamed:@"trash"] tag:1];
-    setController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Setting",@"") image:[UIImage systemImageNamed:@"gearshape"] tag:2];
+    listController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"RootHide",@"") image:[UIImage systemImageNamed:@"list.bullet.circle"] tag:0];
+    whitelistController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Whitelist",@"") image:[UIImage systemImageNamed:@"checkmark.circle"] tag:1];
+    blacklistController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Blacklist",@"") image:[UIImage systemImageNamed:@"nosign"] tag:2];
+    cleanController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"varClean",@"") image:[UIImage systemImageNamed:@"trash"] tag:3];
+    setController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Settings",@"") image:[UIImage systemImageNamed:@"gearshape"] tag:4];
     
 
     UINavigationController *listNavigationController = [[UINavigationController alloc] initWithRootViewController:listController];
+    UINavigationController *whitelistNavigationController = [[UINavigationController alloc] initWithRootViewController:whitelistController];
+    UINavigationController *blacklistNavigationController = [[UINavigationController alloc] initWithRootViewController:blacklistController];
     UINavigationController *cleanNavigationController = [[UINavigationController alloc] initWithRootViewController:cleanController];
     UINavigationController *setNavigationController = [[UINavigationController alloc] initWithRootViewController:setController];
     
 
     
     UITabBarController *tabBarController = [[UITabBarController alloc] init];
-    tabBarController.viewControllers = @[listNavigationController, cleanNavigationController, setNavigationController];
+    tabBarController.viewControllers = @[
+        listNavigationController,
+        whitelistNavigationController,
+        blacklistNavigationController,
+        cleanNavigationController,
+        setNavigationController
+    ];
     
     //
     //tabBarController.tabBar.scrollEdgeAppearance = [UITabBarAppearance new];
     
     self.window.rootViewController = tabBarController;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleRHInjectSettingsChanged:) name:RHInjectSettingsChangedNotification object:nil];
+    [self updateInjectionModeTabs];
     
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////

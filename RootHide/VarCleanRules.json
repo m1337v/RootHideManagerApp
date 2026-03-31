@@ -497,6 +497,7 @@
         ],
         "blacklist":[
             "com.roothide.manager.plist",
+            "m1337.rhinject.plist",
             "com.opa334.Dopamine.roothide.plist",
             "com.opa334.Dopamine.plist",
             "com.tigisoftware.Filza.plist",
@@ -547,6 +548,7 @@
 		],
 		"blacklist":[
 			"com.roothide.manager",
+			"m1337.rhinject",
 			"com.opa334.Dopamine.roothide",
 			"com.opa334.Dopamine",
 			"com.tigisoftware.Filza",

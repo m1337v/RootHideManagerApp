@@ -2,6 +2,8 @@
 #import <spawn.h>
 #import <objc/message.h>
 #import <UIKit/UIKit.h>
+#import <xpc/xpc.h>
+#import <sys/mount.h>
 #import "AppDelegate.h"
 #import "AppInfo.h"
 
@@ -10,11 +12,19 @@
 #endif
 
 extern const char** environ;
+int reboot(int);
+typedef xpc_connection_t (*RHXPCConnectionCreateMachService)(const char *, dispatch_queue_t _Nullable, uint64_t);
 
 #define POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE 1
 extern int posix_spawnattr_set_persona_np(const posix_spawnattr_t* __restrict, uid_t, uint32_t);
 extern int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t* __restrict, uid_t);
 extern int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restrict, uid_t);
+
+@interface LSApplicationWorkspace : NSObject
++ (id)defaultWorkspace;
+- (NSArray *)allInstalledApplications;
+- (void)unregisterApplication:(NSURL *)url;
+@end
 
 int spawn(const char* path, const char** argv, const char** envp, void(^std_out)(char*,int), void(^std_err)(char*,int))
 {
@@ -288,6 +298,105 @@ BOOL RootUserGetDirectoryContents(NSString* path, NSString* cacheFile)
     return YES;
 }
 
+static int RHUserspaceReboot(void)
+{
+    xpc_object_t request = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(request, "cmd", 5);
+
+    int unlinkResult = unlink("/private/var/mobile/Library/MemoryMaintenance/mmaintenanced");
+    if (unlinkResult != 0 && errno != ENOENT) {
+        NSLog(@"could not delete mmaintenanced last reboot file");
+        return -1;
+    }
+
+    RHXPCConnectionCreateMachService createMachService = (RHXPCConnectionCreateMachService)dlsym(RTLD_DEFAULT, "xpc_connection_create_mach_service");
+    if (!createMachService) {
+        NSLog(@"xpc_connection_create_mach_service unavailable");
+        return -1;
+    }
+
+    xpc_connection_t connection = createMachService("com.apple.mmaintenanced", NULL, 0);
+    if (xpc_get_type(connection) == XPC_TYPE_ERROR) {
+        char *description = xpc_copy_description(connection);
+        NSLog(@"XPC_TYPE_ERROR: %s", description);
+        free(description);
+        return -1;
+    }
+
+    xpc_connection_set_event_handler(connection, ^(__unused xpc_object_t event) {
+    });
+    xpc_connection_activate(connection);
+
+    xpc_object_t reply = xpc_connection_send_message_with_reply_sync(connection, request);
+    int result = 0;
+    if (reply != NULL) {
+        char *description = xpc_copy_description(reply);
+        NSLog(@"reply: %s", description);
+        free(description);
+    }
+    else {
+        NSLog(@"no reply received from mmaintenanced");
+        result = -1;
+    }
+
+    xpc_connection_cancel(connection);
+    return result;
+}
+
+static int RHHideApps(void)
+{
+    NSLog(@"Listing all installed applications:");
+
+    NSArray *installedApplications = [LSApplicationWorkspace.defaultWorkspace allInstalledApplications];
+    NSString *selfBundleIdentifier = NSBundle.mainBundle.bundleIdentifier;
+    NSFileManager *fileManager = NSFileManager.defaultManager;
+
+    for (id proxy in installedApplications) {
+        AppInfo *app = [AppInfo appWithPrivateProxy:proxy];
+        NSString *bundleIdentifier = app.bundleIdentifier;
+        NSString *bundlePath = app.bundleURL.path;
+        if (bundlePath.length == 0) {
+            continue;
+        }
+        if ([bundleIdentifier isEqualToString:selfBundleIdentifier]) {
+            NSLog(@"Skipping self app.");
+            continue;
+        }
+
+        struct statfs fileSystemInfo = {};
+        if (statfs(bundlePath.fileSystemRepresentation, &fileSystemInfo) != 0) {
+            continue;
+        }
+        if (strcmp(fileSystemInfo.f_mntonname, "/") == 0) {
+            continue;
+        }
+
+        BOOL shouldHide = YES;
+        if (isUUIDPathOf(bundlePath, @"/private/var/containers/Bundle/Application/")) {
+            BOOL hasTrollStoreMarker = [fileManager fileExistsAtPath:[bundlePath stringByAppendingString:@"/../_TrollStore"]]
+                || [fileManager fileExistsAtPath:[bundlePath stringByAppendingString:@"/../_TrollStoreLite"]];
+            shouldHide = hasTrollStoreMarker;
+            if (!shouldHide) {
+                NSLog(@"skipping normal app: %@", bundleIdentifier);
+                continue;
+            }
+        }
+
+        NSLog(@"App: %@ - %@", bundleIdentifier, app.name);
+        [LSApplicationWorkspace.defaultWorkspace unregisterApplication:app.bundleURL];
+    }
+
+    sleep(1);
+
+    NSURL *selfBundleURL = NSBundle.mainBundle.bundleURL;
+    if (selfBundleURL) {
+        [LSApplicationWorkspace.defaultWorkspace unregisterApplication:selfBundleURL];
+    }
+
+    NSLog(@"Finished hiding apps.");
+    return 0;
+}
+
 int main(int argc, char * argv[]) {
     
     //Keyboard Preference & Localized won't work
@@ -300,6 +409,25 @@ int main(int argc, char * argv[]) {
     
     if(argc >= 2)
     {
+        if(strcmp(argv[1], "hideapps")==0) {
+            return RHHideApps();
+        }
+        if(strcmp(argv[1], "usreboot")==0) {
+            if(argc >= 3 && strcmp(argv[2], "hide")==0) {
+                RHHideApps();
+                sync();
+                sleep(5);
+            }
+            return RHUserspaceReboot();
+        }
+        if(strcmp(argv[1], "reboot")==0) {
+            if(argc >= 3 && strcmp(argv[2], "hide")==0) {
+                RHHideApps();
+                sync();
+                sleep(5);
+            }
+            return reboot(0);
+        }
         if(argc==3 && strcmp(argv[1], "removeItemAtPath")==0) {
             NSError* err;
             if(![NSFileManager.defaultManager removeItemAtPath:@(argv[2]) error:&err]) {

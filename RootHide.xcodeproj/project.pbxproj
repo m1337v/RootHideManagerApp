@@ -394,7 +394,8 @@
 				ENABLE_BITCODE = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RootHide/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = RootHide;
+				INFOPLIST_KEY_CFBundleDisplayName = RHInject;
+				INFOPLIST_KEY_CFBundleName = RHInject;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -411,8 +412,8 @@
 					"$(PROJECT_DIR)/RootHide/roothide",
 				);
 				MARKETING_VERSION = 5.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.roothide.manager;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = m1337.rhinject;
+				PRODUCT_NAME = RHInject;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -434,7 +435,8 @@
 				ENABLE_BITCODE = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RootHide/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = RootHide;
+				INFOPLIST_KEY_CFBundleDisplayName = RHInject;
+				INFOPLIST_KEY_CFBundleName = RHInject;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -451,8 +453,8 @@
 					"$(PROJECT_DIR)/RootHide/roothide",
 				);
 				MARKETING_VERSION = 5.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.roothide.manager;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = m1337.rhinject;
+				PRODUCT_NAME = RHInject;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;

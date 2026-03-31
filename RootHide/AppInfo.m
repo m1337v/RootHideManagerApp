@@ -54,6 +54,14 @@
 
 - (NSString*)name
 {
+    if (self.displayName.length > 0) {
+        return self.displayName;
+    }
+
+    if (_applicationProxy == nil) {
+        return self.zqbbExecutable ?: self.zqbbIdentifier ?: @"";
+    }
+
     NSString *languageCode = [[NSLocale preferredLanguages] firstObject];
     NSRange range = [languageCode rangeOfString:@"-" options:NSBackwardsSearch];
     if (range.location != NSNotFound) {
@@ -75,19 +83,25 @@
 
 - (NSString*)bundleIdentifier
 {
-    return [_applicationProxy bundleIdentifier];
+    return [_applicationProxy bundleIdentifier] ?: self.zqbbIdentifier;
 }
 
 - (NSString*)bundleExecutable
 {
-    return [_applicationProxy bundleExecutable];
+    return [_applicationProxy bundleExecutable] ?: self.zqbbExecutable;
 }
 
 - (UIImage*)icon
 {
+    if (self.displayIcon != nil) {
+        return self.displayIcon;
+    }
+
     if(nil == _icon)
     {
-        _icon = [UIImage _applicationIconImageForBundleIdentifier:self.bundleIdentifier format:10 scale:UIScreen.mainScreen.scale];
+        if (self.bundleIdentifier.length > 0) {
+            _icon = [UIImage _applicationIconImageForBundleIdentifier:self.bundleIdentifier format:10 scale:UIScreen.mainScreen.scale];
+        }
     }
     
     return _icon;
@@ -177,6 +191,9 @@
 
 - (BOOL)isHiddenApp
 {
+    if (_applicationProxy == nil) {
+        return NO;
+    }
     return [[_applicationProxy appTags] indexOfObject:@"hidden"] != NSNotFound;
 }
 
@@ -210,6 +227,23 @@
 + (instancetype)appWithBundleIdentifier:(NSString*)bundleIdentifier
 {
     return [[self alloc] initWithBundleIdentifier:bundleIdentifier];
+}
+
++ (instancetype)syntheticAppWithIdentifier:(NSString *)identifier
+                                 executable:(NSString *)executable
+                                       name:(NSString *)name
+                                       icon:(UIImage *)icon
+                                needsInject:(BOOL)needsInject
+                                  isJailApp:(BOOL)isJailApp
+{
+    AppInfo *app = [[self alloc] init];
+    app.zqbbIdentifier = identifier;
+    app.zqbbExecutable = executable;
+    app.displayName = name;
+    app.displayIcon = icon;
+    app.needsInject = needsInject;
+    app.isJailApp = isJailApp;
+    return app;
 }
 
 @end

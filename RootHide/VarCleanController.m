@@ -143,6 +143,8 @@ NSArray* GetDirectoryContents(NSString* path)
         NSDictionary* customedRuleItem = customedRules[path];
         NSArray* customedWhiteList = customedRuleItem[@"whitelist"];
         NSArray* customedBlackList = customedRuleItem[@"blacklist"];
+        NSArray* removedWhiteList = customedRuleItem[@"removedWhitelist"];
+        NSArray* removedBlackList = customedRuleItem[@"removedBlacklist"];
         [customedRules removeObjectForKey:path];
         
         NSMutableDictionary *tableGroup = @{
@@ -156,9 +158,11 @@ NSArray* GetDirectoryContents(NSString* path)
             
             BOOL checked = NO;
             BOOL ignored = NO;
+            BOOL inBuiltInWhitelist = [self checkFileInList:file List:whiteList] && ![self checkFileInList:file List:removedWhiteList];
+            BOOL inBuiltInBlacklist = [self checkFileInList:file List:blackList] && ![self checkFileInList:file List:removedBlackList];
             
             // blacklist priority
-            if([self checkFileInList:file List:blackList])
+            if(inBuiltInBlacklist)
             {
                 if([self checkFileInList:file List:customedWhiteList]) {
                     ignored = YES;
@@ -171,7 +175,7 @@ NSArray* GetDirectoryContents(NSString* path)
             {
                 checked = YES;
             }
-            else if([self checkFileInList:file List:whiteList])
+            else if(inBuiltInWhitelist)
             {
                 continue;
             }

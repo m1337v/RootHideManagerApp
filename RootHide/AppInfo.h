@@ -7,6 +7,12 @@
 
 @interface AppInfo : NSObject
 @property (nonatomic, strong) NSString *infoPlistPath;
+@property (nonatomic, copy) NSString *zqbbIdentifier;
+@property (nonatomic, copy) NSString *zqbbExecutable;
+@property (nonatomic, copy) NSString *displayName;
+@property (nonatomic, strong) UIImage *displayIcon;
+@property (nonatomic, assign) BOOL needsInject;
+@property (nonatomic, assign) BOOL isJailApp;
 
 @property (nonatomic, readonly) NSString* bundleIdentifier;
 @property (nonatomic, readonly) NSString* bundleExecutable;
@@ -40,8 +46,13 @@
 
 + (instancetype)appWithPrivateProxy:(id)privateProxy;
 + (instancetype)appWithBundleIdentifier:(NSString*)bundleIdentifier;
++ (instancetype)syntheticAppWithIdentifier:(NSString *)identifier
+                                 executable:(NSString *)executable
+                                       name:(NSString *)name
+                                       icon:(UIImage *)icon
+                                needsInject:(BOOL)needsInject
+                                  isJailApp:(BOOL)isJailApp;
 
 @end
-
 
 
