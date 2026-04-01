@@ -19,17 +19,33 @@ jobs:
             rules_override_basename: ""
             artifact_name: varClean15
             artifact_file: varClean15.tipa
+            deb_file: com.m1337.varclean_1.0_iphoneos-arm64.deb
             release_tag: rootless
             release_name: Rootless
             prerelease: false
+            package_depends: "firmware (>= 15.0)"
+            package_description: "varClean for rootless"
+            package_display_name: "varClean (rootless)"
+            package_icon: "https://raw.githubusercontent.com/m1337v/RootHideManagerApp/rootless/varClean/Assets.xcassets/AppIcon.appiconset/icon-1024.png"
+            package_architecture: "iphoneos-arm64"
+            install_root: "/var/jb/Applications"
+            postinst_binary_path: "/var/jb/Applications/varClean.app/varClean"
           - name: Rootful
             deployment_target: "14.0"
             rules_override_basename: varCleanRules_rootful_overrides
             artifact_name: varClean14
             artifact_file: varClean14.tipa
+            deb_file: com.m1337.varclean_1.0_iphoneos-arm.deb
             release_tag: rootful
             release_name: Rootful
             prerelease: true
+            package_depends: "firmware (>= 14.0), firmware (<< 15.0)"
+            package_description: "varClean for rootful"
+            package_display_name: "varClean (rootful)"
+            package_icon: "https://raw.githubusercontent.com/m1337v/RootHideManagerApp/rootful/varClean/Assets.xcassets/AppIcon.appiconset/icon-1024.png"
+            package_architecture: "iphoneos-arm"
+            install_root: "/Applications"
+            postinst_binary_path: "/Applications/varClean.app/varClean"
     env:
       DERIVED_DATA: ${{ github.workspace }}/.derivedData-${{ matrix.release_tag }}
     steps:
@@ -41,12 +57,12 @@ jobs:
         with:
           xcode-version: 'latest'
 
-      - name: Install ldid
-        run: brew install ldid
+      - name: Install Packaging Tools
+        run: brew install ldid dpkg
 
       - name: Build ${{ matrix.name }} .app with Xcode
         run: |
-          rm -rf "$DERIVED_DATA" Payload "${{ matrix.artifact_file }}"
+          rm -rf "$DERIVED_DATA" Payload package-root "${{ matrix.artifact_file }}" "${{ matrix.deb_file }}"
           xcodebuild -project varClean.xcodeproj \
                      -scheme varClean \
                      -configuration Release \
@@ -73,17 +89,56 @@ jobs:
         run: |
           zip -r9 "${{ matrix.artifact_file }}" Payload
 
+      - name: Build ${{ matrix.name }} .deb
+        run: |
+          mkdir -p "package-root${{ matrix.install_root }}"
+          cp -R "${DERIVED_DATA}/Build/Products/Release-iphoneos/varClean.app" "package-root${{ matrix.install_root }}/"
+
+          mkdir -p package-root/DEBIAN
+          cat > package-root/DEBIAN/control <<EOF
+          Package: com.m1337.varclean
+          Name: ${{ matrix.package_display_name }}
+          Depends: ${{ matrix.package_depends }}
+          Description: ${{ matrix.package_description }}
+          Maintainer: m1337
+          Author: roothide
+          Section: System
+          Icon: ${{ matrix.package_icon }}
+          Depiction: https://github.com/m1337v/RootHideManagerApp
+          Support: https://github.com/m1337v/RootHideManagerApp
+          Architecture: ${{ matrix.package_architecture }}
+          Version: 1.0
+          EOF
+
+          cat > package-root/DEBIAN/postinst <<EOF
+          #!/bin/sh
+
+          chown 0:0 ${{ matrix.postinst_binary_path }}
+          chmod +s ${{ matrix.postinst_binary_path }}
+          EOF
+          chmod 0755 package-root/DEBIAN/postinst
+
+          dpkg-deb -b package-root "${{ matrix.deb_file }}"
+
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_file }}
 
-      - name: Create Release and Upload IPA (${{ matrix.name }})
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.release_tag }}-deb
+          path: ${{ matrix.deb_file }}
+
+      - name: Create Release and Upload Artifacts (${{ matrix.name }})
         uses: softprops/action-gh-release@v1
         if: success() && github.event_name != 'pull_request'
         with:
-          files: ${{ matrix.artifact_file }}
+          files: |
+            ${{ matrix.artifact_file }}
+            ${{ matrix.deb_file }}
           tag_name: ${{ matrix.release_tag }}
           name: ${{ matrix.release_name }}
           draft: false
