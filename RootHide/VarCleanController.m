@@ -313,62 +313,73 @@ NSArray* GetDirectoryContents(NSString* path)
 }
 
 - (void)varClean {
+    NSMutableArray<NSString *> *pathsToDelete = [NSMutableArray array];
+    for (NSDictionary *group in self.tableData) {
+        for (NSDictionary *item in group[@"items"]) {
+            if ([item[@"checked"] boolValue]) {
+                [pathsToDelete addObject:item[@"path"]];
+            }
+        }
+    }
+
+    if (pathsToDelete.count == 0) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"No Files Selected")
+                                                                       message:Localized(@"Please select files to clean.")
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"OK") style:UIAlertActionStyleDefault handler:nil]];
+        [self presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+
+    NSString *pathList = [pathsToDelete componentsJoinedByString:@"\n"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Confirm Deletion")
+                                                                   message:[NSString stringWithFormat:Localized(@"You are about to delete the following files:\n\n%@"), pathList]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Confirm") style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [self performDeletion];
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)performDeletion
+{
     NSLog(@"self.tableData=%@", self.tableData);
-    
+
     [self.tableView.refreshControl beginRefreshing];
-    
-    for(NSDictionary* group in [self.tableData copy]) {
-        for(NSDictionary* item in [group[@"items"] copy])
-        {
-            if(![item[@"checked"] boolValue]) continue;
-            
+
+    for (NSDictionary *group in [self.tableData copy]) {
+        for (NSDictionary *item in [group[@"items"] copy]) {
+            if (![item[@"checked"] boolValue]) continue;
+
             NSLog(@"clean=%@", item);
-            
-            /*
-            NSString* backup = jbroot(@"/var/mobile/Library/RootHide/backup");
-            NSString* newpath = [backup stringByAppendingPathComponent:item[@"path"]];
-            NSString* dirpath = [newpath stringByDeletingLastPathComponent];
-            NSLog(@"newpath=%@, dirpath=%@", newpath, dirpath);
-            if(![NSFileManager.defaultManager fileExistsAtPath:dirpath])
-                [NSFileManager.defaultManager createDirectoryAtPath:dirpath
-                                        withIntermediateDirectories:YES attributes:nil error:nil];
-            [NSFileManager.defaultManager copyItemAtPath:item[@"path"] toPath:newpath error:nil];
-            //*/
-            
-//            NSDirectoryEnumerator<NSString*>* enumerator = [NSFileManager.defaultManager enumeratorAtPath:item[@"path"]];
-//            if(enumerator) for(NSString* subpath in enumerator)
-//            {
-//                NSError* err;
-//                if(![NSFileManager.defaultManager removeItemAtPath:[item[@"path"] stringByAppendingPathComponent:subpath] error:&err]) {
-//                    NSLog(@"clean failed=%@", err);
-//                }
-//            }
-            
-            NSError* err;
-            if(![NSFileManager.defaultManager removeItemAtPath:item[@"path"] error:&err]) {
+
+            NSError *err;
+            if (![NSFileManager.defaultManager removeItemAtPath:item[@"path"] error:&err]) {
                 NSLog(@"clean failed: %@", err);
-                
-                if(geteuid()!=0 || getegid()!=0) {
+
+                if (geteuid() != 0 || getegid() != 0) {
                     NSLog(@"try RootUserRemoveItemAtPath: %@", item[@"path"]);
                     BOOL RootUserRemoveItemAtPath(NSString* path);
                     BOOL __ret = RootUserRemoveItemAtPath(item[@"path"]);
+                    (void)__ret;
                 }
-                
+
                 continue;
             }
-            
-            NSIndexPath* indexPath = [NSIndexPath indexPathForRow:[group[@"items"] indexOfObject:item]
-                                                        inSection:[self.tableData indexOfObject:group] ];
-            
-            [group[@"items"] removeObject:item]; //delete source data first
-            
+
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:[group[@"items"] indexOfObject:item]
+                                                        inSection:[self.tableData indexOfObject:group]];
+
+            [group[@"items"] removeObject:item];
+
             NSLog(@"indexPath=%@", indexPath);
             [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationLeft];
         }
     }
-    
+
     [self.tableView.refreshControl endRefreshing];
-    
+
     self.tableData = [self updateData:NO];
     [self.tableView reloadData];
 }

@@ -226,7 +226,14 @@ BOOL isDefaultInstallationPath(NSString* path)
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     (void)tableView;
     (void)section;
-    return Localized(@"Classic Hidden Apps");
+    return nil;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    return CGFLOAT_MIN;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section

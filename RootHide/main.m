@@ -24,6 +24,7 @@ extern int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restric
 + (id)defaultWorkspace;
 - (NSArray *)allInstalledApplications;
 - (void)unregisterApplication:(NSURL *)url;
+- (void)_LSPrivateRebuildApplicationDatabasesForSystemApps:(BOOL)system internal:(BOOL)internal user:(BOOL)user;
 @end
 
 int spawn(const char* path, const char** argv, const char** envp, void(^std_out)(char*,int), void(^std_err)(char*,int))
@@ -343,6 +344,31 @@ static int RHUserspaceReboot(void)
     return result;
 }
 
+static int RHRefreshAppRegistrations(void)
+{
+    LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
+    if (workspace && [workspace respondsToSelector:@selector(_LSPrivateRebuildApplicationDatabasesForSystemApps:internal:user:)]) {
+        [workspace _LSPrivateRebuildApplicationDatabasesForSystemApps:YES internal:YES user:YES];
+        return 0;
+    }
+    return -1;
+}
+
+static int RHRebuildIconCache(void)
+{
+    [[NSFileManager defaultManager] removeItemAtPath:@"/var/containers/Shared/SystemGroup/systemgroup.com.apple.lsd.iconscache/Library/Caches/com.apple.IconsCache" error:nil];
+    int refreshResult = RHRefreshAppRegistrations();
+    if (refreshResult != 0) {
+        return refreshResult;
+    }
+    return spawnRoot(jbroot(@"/usr/bin/uicache"), @[@"-a"], nil, nil);
+}
+
+static int RHStandardRespring(void)
+{
+    return spawnRoot(jbroot(@"/usr/bin/killall"), @[@"SpringBoard"], nil, nil);
+}
+
 static int RHHideApps(void)
 {
     NSLog(@"Listing all installed applications:");
@@ -411,6 +437,15 @@ int main(int argc, char * argv[]) {
     {
         if(strcmp(argv[1], "hideapps")==0) {
             return RHHideApps();
+        }
+        if(strcmp(argv[1], "refreshreg")==0) {
+            return RHRefreshAppRegistrations();
+        }
+        if(strcmp(argv[1], "rebuildiconcache")==0) {
+            return RHRebuildIconCache();
+        }
+        if(strcmp(argv[1], "respring")==0) {
+            return RHStandardRespring();
         }
         if(strcmp(argv[1], "usreboot")==0) {
             if(argc >= 3 && strcmp(argv[2], "hide")==0) {

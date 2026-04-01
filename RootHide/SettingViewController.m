@@ -1606,13 +1606,20 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                  detail:Localized(@"Apply launchd-managed changes now.")
                                    type:@"action"
                                  target:@"reboot"],
-            ],
-        },
-        @{
-            @"groupTitle" : Localized(@"Maintenance"),
-            @"items" : @[
+                [self menuItemWithTitle:Localized(@"Standard Respring")
+                                 detail:Localized(@"Restart SpringBoard without a userspace reboot.")
+                                   type:@"action"
+                                 target:@"respring"],
+                [self menuItemWithTitle:Localized(@"Reboot Device")
+                                 detail:Localized(@"Restart the device completely.")
+                                   type:@"action"
+                                 target:@"rebootDevice"],
+                [self menuItemWithTitle:Localized(@"TrollStore Functions")
+                                 detail:Localized(@"Restore app registrations or rebuild icon cache after visibility changes.")
+                                   type:@"action"
+                                 target:@"trollStoreActions"],
                 [self menuItemWithTitle:Localized(@"HideApps Actions")
-                                 detail:Localized(@"Hide TrollStore and jailbreak app registrations, optionally followed by a reboot.")
+                                 detail:Localized(@"Hide TrollStore and jailbreak app registrations, optionally followed by a userspace reboot.")
                                    type:@"action"
                                  target:@"hideAppsActions"],
             ],
@@ -1638,7 +1645,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
             @"groupTitle" : Localized(@"Advanced"),
             @"items" : @[
                 [self menuItemWithTitle:Localized(@"varClean Rules")
-                                 detail:Localized(@"Edit custom keep/remove overrides and default modes in-app.")
+                                 detail:Localized(@"Edit custom keep/remove overrides in-app.")
                                    type:@"controller"
                                  target:@"varCleanRules"],
             ],
@@ -1704,7 +1711,14 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     }
     else if ([item[@"type"] isEqualToString:@"action"]) {
-        cell.textLabel.textColor = self.view.tintColor;
+        NSString *target = item[@"target"];
+        if ([target isEqualToString:@"hideAppsActions"]) {
+            cell.textLabel.textColor = UIColor.systemRedColor;
+            cell.detailTextLabel.textColor = UIColor.systemRedColor;
+        }
+        else {
+            cell.textLabel.textColor = self.view.tintColor;
+        }
     }
 
     return cell;
@@ -1777,29 +1791,15 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 - (void)presentHideAppsActionSheetFromSourceView:(UIView *)sourceView
 {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"HideApps Actions")
-                                                                   message:Localized(@"Run the classic HideApps maintenance helpers.")
+                                                                   message:Localized(@"HideApps unregisters TrollStore and jailbreak apps. Use TrollStore Functions to restore app registrations or rebuild icon cache afterward.")
                                                             preferredStyle:UIAlertControllerStyleActionSheet];
 
     [alert addAction:[UIAlertAction actionWithTitle:Localized(@"HideApps")
-                                              style:UIAlertActionStyleDefault
+                                              style:UIAlertActionStyleDestructive
                                             handler:^(__unused UIAlertAction *action) {
         [self runPrivilegedActionWithArguments:@[@"hideapps"]
                                          title:Localized(@"HideApps")
                                    successText:Localized(@"HideApps finished. Relaunch any affected apps if needed.")];
-    }]];
-    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Reboot Device")
-                                              style:UIAlertActionStyleDestructive
-                                            handler:^(__unused UIAlertAction *action) {
-        [self runPrivilegedActionWithArguments:@[@"reboot"]
-                                         title:Localized(@"Reboot Device")
-                                   successText:nil];
-    }]];
-    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Reboot Userspace")
-                                              style:UIAlertActionStyleDefault
-                                            handler:^(__unused UIAlertAction *action) {
-        [self runPrivilegedActionWithArguments:@[@"usreboot"]
-                                         title:Localized(@"Reboot Userspace")
-                                   successText:nil];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:Localized(@"HideApps + Reboot Device")
                                               style:UIAlertActionStyleDestructive
@@ -1809,11 +1809,38 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                    successText:nil];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:Localized(@"HideApps + Reboot Userspace")
-                                              style:UIAlertActionStyleDefault
+                                              style:UIAlertActionStyleDestructive
                                             handler:^(__unused UIAlertAction *action) {
         [self runPrivilegedActionWithArguments:@[@"usreboot", @"hide"]
                                          title:Localized(@"HideApps + Reboot Userspace")
                                    successText:nil];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+
+    alert.popoverPresentationController.sourceView = sourceView ?: self.view;
+    alert.popoverPresentationController.sourceRect = sourceView ? sourceView.bounds : self.view.bounds;
+    [AppDelegate showAlert:alert];
+}
+
+- (void)presentTrollStoreActionSheetFromSourceView:(UIView *)sourceView
+{
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"TrollStore Functions")
+                                                                   message:Localized(@"Restore app registrations or rebuild icon cache after HideApps or other registration issues.")
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Refresh App Registrations")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(__unused UIAlertAction *action) {
+        [self runPrivilegedActionWithArguments:@[@"refreshreg"]
+                                         title:Localized(@"Refresh App Registrations")
+                                   successText:Localized(@"Application registrations were refreshed.")];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Rebuild Icon Cache")
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(__unused UIAlertAction *action) {
+        [self runPrivilegedActionWithArguments:@[@"rebuildiconcache"]
+                                         title:Localized(@"Rebuild Icon Cache")
+                                   successText:Localized(@"Icon cache rebuild finished.")];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
 
@@ -1836,8 +1863,41 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         return;
     }
 
+    if ([target isEqualToString:@"rebootDevice"]) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Reboot Device")
+                                                                       message:Localized(@"Reboot device now?")
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Reboot Now") style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+            [self runPrivilegedActionWithArguments:@[@"reboot"]
+                                             title:Localized(@"Reboot Device")
+                                       successText:nil];
+        }]];
+        [AppDelegate showAlert:alert];
+        return;
+    }
+
+    if ([target isEqualToString:@"respring"]) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Standard Respring")
+                                                                       message:Localized(@"Restart SpringBoard now?")
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Respring Now") style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+            [self runPrivilegedActionWithArguments:@[@"respring"]
+                                             title:Localized(@"Standard Respring")
+                                       successText:nil];
+        }]];
+        [AppDelegate showAlert:alert];
+        return;
+    }
+
     if ([target isEqualToString:@"hideAppsActions"]) {
         [self presentHideAppsActionSheetFromSourceView:nil];
+        return;
+    }
+
+    if ([target isEqualToString:@"trollStoreActions"]) {
+        [self presentTrollStoreActionSheetFromSourceView:nil];
     }
 }
 
