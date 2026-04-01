@@ -60,6 +60,6 @@ jobs:
           release_name: RHInject
           body: Automatically updated RHInject standalone builds.
           draft: false
-          prerelease: false
+          prerelease: true
           overwrite: true
           files: ${{ github.workspace }}/${{ env.deb_path }}

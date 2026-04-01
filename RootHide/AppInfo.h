@@ -13,6 +13,8 @@
 @property (nonatomic, strong) UIImage *displayIcon;
 @property (nonatomic, assign) BOOL needsInject;
 @property (nonatomic, assign) BOOL isJailApp;
+@property (nonatomic, assign) BOOL forcedEnabled;
+@property (nonatomic, copy) NSString *forcedRuleKey;
 
 @property (nonatomic, readonly) NSString* bundleIdentifier;
 @property (nonatomic, readonly) NSString* bundleExecutable;
@@ -54,5 +56,4 @@
                                   isJailApp:(BOOL)isJailApp;
 
 @end
-
 

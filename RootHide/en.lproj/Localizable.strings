@@ -76,9 +76,14 @@
 "App Rules" = "App Rules";
 "Whitelist Apps" = "Whitelist Apps";
 "Uninject Apps" = "Uninject Apps";
+"Forced Whitelist Entries" = "Forced Whitelist Entries";
+"Executables explicitly enabled in cn.zqbb.inject.plist." = "Executables explicitly enabled in cn.zqbb.inject.plist.";
+"Read-only view of entries forced on by whitelist helpers." = "Read-only view of entries forced on by whitelist helpers.";
 "Executable allowlist for whitelist mode." = "Executable allowlist for whitelist mode.";
 "Executable denylist for blacklist mode." = "Executable denylist for blacklist mode.";
+"These executable names are explicitly enabled in whitelist mode." = "These executable names are explicitly enabled in whitelist mode.";
 "These executable names are allowed to inject when whitelist mode is active." = "These executable names are allowed to inject when whitelist mode is active.";
+"These executable names are allowed to inject when whitelist mode is active. Locked entries are forced by whitelist helpers and can be reviewed in Settings." = "These executable names are allowed to inject when whitelist mode is active. Locked entries are forced by whitelist helpers and can be reviewed in Settings.";
 "These executable names are skipped when blacklist mode is active." = "These executable names are skipped when blacklist mode is active.";
 "Whitelist Helpers" = "Whitelist Helpers";
 "System Injection Paths" = "System Injection Paths";
@@ -98,6 +103,7 @@
 "Add Jetsam Addend Executable" = "Add Jetsam Addend Executable";
 "Add to Whitelist" = "Add to Whitelist";
 "Add to Blacklist" = "Add to Blacklist";
+"Enter an executable name that should be explicitly enabled in whitelist mode." = "Enter an executable name that should be explicitly enabled in whitelist mode.";
 "Enter a path fragment to keep injectable in whitelist mode." = "Enter a path fragment to keep injectable in whitelist mode.";
 "Enter an executable name that should still honor the hidden-app blacklist." = "Enter an executable name that should still honor the hidden-app blacklist.";
 "Enter an executable name that should receive the jetsam addend." = "Enter an executable name that should receive the jetsam addend.";
@@ -112,6 +118,12 @@
 "Edit Jetsam Addend Rule" = "Edit Jetsam Addend Rule";
 "Set the numeric addend that should be applied when the executable matches." = "Set the numeric addend that should be applied when the executable matches.";
 "Tips" = "Tips";
+"Sort" = "Sort";
+"Original RHInject" = "Original RHInject";
+"Alphabetical" = "Alphabetical";
+"Forced on by whitelist helper: %@" = "Forced on by whitelist helper: %@";
+"These entries are forced on by whitelist helpers and appear locked in the whitelist app browser." = "These entries are forced on by whitelist helpers and appear locked in the whitelist app browser.";
+"Jailbreak Apps" = "Jailbreak Apps";
 "Those marked in red are required by the plug-in, and it is recommended to enable them.\n\nFor the UIKit global plug-in, please enable the corresponding app on your own.\n\nFor the home screen search feature, please enable Spotlight.\n\nRegarding third-party keyboard extensions, please inject the corresponding appex background. (For example, WeChat is wxkb_plugin).\n\nAfter enabling whitelist mode, the blacklist injection tab becomes inactive. QQ, WeChat, Runner, and AppStore can still use the hidden-app blacklist through inject.wantsblacklist." = "Those marked in red are required by the plug-in, and it is recommended to enable them.\n\nFor the UIKit global plug-in, please enable the corresponding app on your own.\n\nFor the home screen search feature, please enable Spotlight.\n\nRegarding third-party keyboard extensions, please inject the corresponding appex background. (For example, WeChat is wxkb_plugin).\n\nAfter enabling whitelist mode, the blacklist injection tab becomes inactive. QQ, WeChat, Runner, and AppStore can still use the hidden-app blacklist through inject.wantsblacklist.";
 "Enabled" = "Enabled";
 "Disabled" = "Disabled";

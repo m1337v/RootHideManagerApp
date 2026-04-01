@@ -9,6 +9,9 @@ static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobi
 static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.jetsam.addend.plist";
 static NSString * const RHVarCleanRulesRelativePath = @"/var/mobile/Library/RootHide/varCleanRules.plist";
 static NSString * const RHVarCleanCustomRulesRelativePath = @"/var/mobile/Library/RootHide/varCleanRules-custom.plist";
+static NSString * const RHWhitelistSortModeDefaultsKey = @"m1337.rhinject.whitelistSortMode";
+static NSString * const RHWhitelistSortModeOriginal = @"original";
+static NSString * const RHWhitelistSortModeAlphabetical = @"alphabetical";
 
 void killAllForBundle(const char *bundlePath);
 int spawnRoot(NSString* path, NSArray* args, NSString** stdOut, NSString** stdErr);
@@ -26,6 +29,25 @@ static BOOL RHDictionaryBoolValue(id value)
 static NSInteger RHDictionaryIntegerValue(id value, NSInteger fallback)
 {
     return [value respondsToSelector:@selector(integerValue)] ? [value integerValue] : fallback;
+}
+
+static NSString *RHNormalizedWhitelistSortMode(NSString *mode)
+{
+    if ([mode isEqualToString:RHWhitelistSortModeAlphabetical]) {
+        return RHWhitelistSortModeAlphabetical;
+    }
+    return RHWhitelistSortModeOriginal;
+}
+
+static NSString *RHCurrentWhitelistSortMode(void)
+{
+    NSString *mode = [[NSUserDefaults standardUserDefaults] stringForKey:RHWhitelistSortModeDefaultsKey];
+    return RHNormalizedWhitelistSortMode(mode);
+}
+
+static void RHSetCurrentWhitelistSortMode(NSString *mode)
+{
+    [[NSUserDefaults standardUserDefaults] setObject:RHNormalizedWhitelistSortMode(mode) forKey:RHWhitelistSortModeDefaultsKey];
 }
 
 static BOOL RHPathIsDefaultInstallationPath(NSString *path)
@@ -53,15 +75,6 @@ static NSString *RHVarCleanModeDisplayName(NSString *mode)
         return Localized(@"Blacklist");
     }
     return Localized(@"Inherit");
-}
-
-static NSString *RHVarCleanEffectiveModeDisplayName(NSDictionary *baseRule, NSDictionary *customRule)
-{
-    NSString *customMode = customRule[@"default"];
-    if (customMode.length > 0) {
-        return RHVarCleanModeDisplayName(customMode);
-    }
-    return RHVarCleanModeDisplayName(baseRule[@"default"]);
 }
 
 static NSString *RHVarCleanEntryDisplayName(id entry)
@@ -199,6 +212,11 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                 addEntryTitle:(NSString *)addEntryTitle
               addEntryMessage:(NSString *)addEntryMessage
           addEntryPlaceholder:(NSString *)addEntryPlaceholder;
+@end
+
+@interface RHForcedEntriesViewController : UITableViewController
+@property (nonatomic, copy) NSArray<NSDictionary *> *entries;
+@property (nonatomic, copy) NSString *footerText;
 @end
 
 @interface RHNumberDictionaryViewController : UITableViewController
@@ -477,6 +495,97 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
 @end
 
+@implementation RHForcedEntriesViewController
+
+- (NSArray<NSDictionary *> *)loadEntries
+{
+    NSDictionary *systemRules = [AppDelegate rootHideDictionaryForRelativePath:RHRootHideInjectSystemRelativePath
+                                                                 createIfNeeded:YES
+                                                                       defaults:[AppDelegate defaultSystemInjection]];
+    NSMutableArray<NSDictionary *> *entries = [NSMutableArray array];
+    NSMutableSet<NSString *> *seenKeys = [NSMutableSet set];
+
+    for (NSString *ruleKey in [[systemRules allKeys] sortedArrayUsingSelector:@selector(localizedStandardCompare:)]) {
+        if (!RHDictionaryBoolValue(systemRules[ruleKey]) || ruleKey.length == 0) {
+            continue;
+        }
+
+        NSString *displayName = ruleKey.lastPathComponent;
+        if (displayName.length == 0) {
+            displayName = ruleKey;
+        }
+        if ([displayName isEqualToString:@".jbroot"]) {
+            displayName = Localized(@"Jailbreak Apps");
+        }
+
+        if ([seenKeys containsObject:ruleKey]) {
+            continue;
+        }
+        [seenKeys addObject:ruleKey];
+        [entries addObject:@{
+            @"title" : displayName,
+            @"detail" : ruleKey,
+        }];
+    }
+
+    return entries;
+}
+
+- (void)reloadData
+{
+    self.entries = [self loadEntries];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.navigationController.navigationBar.hidden = NO;
+    self.tableView.tableFooterView = [[UIView alloc] init];
+    [self reloadData];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(settingsChanged) name:RHInjectSettingsChangedNotification object:nil];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self reloadData];
+    [self.tableView reloadData];
+}
+
+- (void)settingsChanged
+{
+    [self reloadData];
+    [self.tableView reloadData];
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    return self.entries.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    return self.footerText;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"ForcedEntryCell"];
+    NSDictionary *entry = self.entries[indexPath.row];
+    cell.textLabel.text = entry[@"title"];
+    cell.detailTextLabel.text = entry[@"detail"];
+    cell.detailTextLabel.numberOfLines = 2;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+@end
+
 @implementation RHNumberDictionaryViewController
 
 - (instancetype)initWithTitle:(NSString *)title
@@ -667,6 +776,80 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 - (NSMutableDictionary *)rulesDictionary
 {
     return [AppDelegate rootHideDictionaryForRelativePath:self.rulesRelativePath createIfNeeded:YES defaults:@{}];
+}
+
+- (BOOL)isWhitelistRulesController
+{
+    return [self.rulesRelativePath isEqualToString:RHRootHideInjectRelativePath];
+}
+
+- (NSDictionary *)systemInjectionDictionary
+{
+    return [AppDelegate rootHideDictionaryForRelativePath:RHRootHideInjectSystemRelativePath
+                                            createIfNeeded:YES
+                                                  defaults:[AppDelegate defaultSystemInjection]];
+}
+
+- (NSString *)applicationKeyForApp:(AppInfo *)app
+{
+    if (app.bundleExecutable.length > 0) {
+        return app.bundleExecutable;
+    }
+    if (app.bundleIdentifier.length > 0) {
+        return app.bundleIdentifier;
+    }
+    if (app.zqbbExecutable.length > 0) {
+        return app.zqbbExecutable;
+    }
+    return app.zqbbIdentifier;
+}
+
+- (NSString *)displayTokenForSystemRuleKey:(NSString *)ruleKey
+{
+    if (![ruleKey isKindOfClass:[NSString class]] || ruleKey.length == 0) {
+        return nil;
+    }
+
+    NSString *token = ruleKey.lastPathComponent;
+    if (token.length == 0 || [token isEqualToString:@".jbroot"]) {
+        return nil;
+    }
+    return token;
+}
+
+- (NSString *)forcedSystemRuleKeyForApp:(AppInfo *)app systemRules:(NSDictionary *)systemRules
+{
+    NSString *bundlePath = app.bundleURL.path ?: @"";
+    NSString *bundleExecutable = [self applicationKeyForApp:app] ?: @"";
+
+    for (NSString *ruleKey in systemRules) {
+        if (!RHDictionaryBoolValue(systemRules[ruleKey]) || ruleKey.length == 0) {
+            continue;
+        }
+
+        if (bundlePath.length > 0 && [bundlePath containsString:ruleKey]) {
+            return ruleKey;
+        }
+
+        NSString *displayToken = [self displayTokenForSystemRuleKey:ruleKey];
+        if (displayToken.length > 0 && [bundleExecutable isEqualToString:displayToken]) {
+            return ruleKey;
+        }
+    }
+
+    return nil;
+}
+
+- (void)markForcedWhitelistStateForApp:(AppInfo *)app systemRules:(NSDictionary *)systemRules
+{
+    app.forcedEnabled = NO;
+    app.forcedRuleKey = nil;
+
+    NSString *forcedRuleKey = [self forcedSystemRuleKeyForApp:app systemRules:systemRules];
+    if (forcedRuleKey.length > 0) {
+        app.forcedEnabled = YES;
+        app.forcedRuleKey = forcedRuleKey;
+    }
 }
 
 - (AppInfo *)findAppInArray:(NSArray<AppInfo *> *)applications matchingToken:(NSString *)token
@@ -887,6 +1070,42 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     }];
 }
 
+- (void)applyForcedWhitelistEntriesToApplications:(NSMutableArray<AppInfo *> *)applications
+{
+    NSDictionary *systemRules = [self systemInjectionDictionary];
+    for (AppInfo *app in applications) {
+        [self markForcedWhitelistStateForApp:app systemRules:systemRules];
+    }
+
+    [systemRules enumerateKeysAndObjectsUsingBlock:^(NSString *ruleKey, id value, BOOL *stop) {
+        (void)stop;
+        if (!RHDictionaryBoolValue(value)) {
+            return;
+        }
+
+        NSString *displayToken = [self displayTokenForSystemRuleKey:ruleKey];
+        if (displayToken.length == 0) {
+            return;
+        }
+
+        AppInfo *existing = [self findAppInArray:applications matchingToken:displayToken];
+        if (!existing) {
+            [self addSyntheticAppToApplications:applications
+                               bundleIdentifier:displayToken
+                                bundleExecutable:displayToken
+                                            name:displayToken
+                                     needsInject:NO
+                                       isJailApp:NO];
+            existing = [self findAppInArray:applications matchingToken:displayToken];
+        }
+
+        if (existing) {
+            existing.forcedEnabled = YES;
+            existing.forcedRuleKey = ruleKey;
+        }
+    }];
+}
+
 - (NSArray<AppInfo *> *)loadApplications
 {
     NSMutableArray<AppInfo *> *applications = [NSMutableArray array];
@@ -911,28 +1130,56 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         [self addBundledApplicationsFromRoot:applicationsRoot toApplications:applications];
     }
 
-    if ([self.rulesRelativePath isEqualToString:RHRootHideInjectRelativePath]) {
+    if ([self isWhitelistRulesController]) {
         [self addRequiredEntriesFromTweakInjectToApplications:applications];
     }
 
     [self addExplicitlyEnabledEntriesToApplications:applications];
+    if ([self isWhitelistRulesController]) {
+        [self applyForcedWhitelistEntriesToApplications:applications];
+    }
     return applications;
+}
+
+- (BOOL)isAlphabeticalSortEnabled
+{
+    return [self isWhitelistRulesController] && [RHCurrentWhitelistSortMode() isEqualToString:RHWhitelistSortModeAlphabetical];
+}
+
+- (BOOL)isEnabledInRulesForApp:(AppInfo *)app rules:(NSDictionary *)rules
+{
+    NSString *key = [self applicationKeyForApp:app];
+    return key.length > 0 && RHDictionaryBoolValue(rules[key]);
+}
+
+- (BOOL)isEffectivelyEnabledApp:(AppInfo *)app rules:(NSDictionary *)rules
+{
+    return app.forcedEnabled || [self isEnabledInRulesForApp:app rules:rules];
 }
 
 - (NSArray<AppInfo *> *)sortApplications:(NSArray<AppInfo *> *)applications sortWithStatus:(BOOL)sortWithStatus
 {
-    NSMutableDictionary *rules = [self rulesDictionary];
-    return [applications sortedArrayUsingComparator:^NSComparisonResult(AppInfo *app1, AppInfo *app2) {
-        if (sortWithStatus) {
-            BOOL enabled1 = RHDictionaryBoolValue(rules[app1.bundleExecutable]);
-            BOOL enabled2 = RHDictionaryBoolValue(rules[app2.bundleExecutable]);
+    NSDictionary *rules = [self rulesDictionary];
+    BOOL alphabeticalOnly = [self isAlphabeticalSortEnabled];
 
+    return [applications sortedArrayUsingComparator:^NSComparisonResult(AppInfo *app1, AppInfo *app2) {
+        if (sortWithStatus && !alphabeticalOnly) {
+            BOOL enabled1 = [self isEffectivelyEnabledApp:app1 rules:rules];
+            BOOL enabled2 = [self isEffectivelyEnabledApp:app2 rules:rules];
             if (enabled1 != enabled2) {
                 return [@(enabled2) compare:@(enabled1)];
             }
 
+            if (app1.forcedEnabled != app2.forcedEnabled) {
+                return [@(app2.forcedEnabled) compare:@(app1.forcedEnabled)];
+            }
+
             if (app1.needsInject != app2.needsInject) {
                 return [@(app2.needsInject) compare:@(app1.needsInject)];
+            }
+
+            if (app1.isHiddenApp != app2.isHiddenApp) {
+                return [@(app1.isHiddenApp) compare:@(app2.isHiddenApp)];
             }
         }
 
@@ -979,8 +1226,10 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
 - (void)settingsChanged
 {
+    self.applications = [self loadApplications];
     self.appsArray = [self sortApplications:self.applications sortWithStatus:YES];
     [self reloadSearch];
+    [self updateSortButton];
     [self.tableView reloadData];
 }
 
@@ -988,6 +1237,85 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 {
     [AppDelegate showMessage:Localized(@"Those marked in red are required by the plug-in, and it is recommended to enable them.\n\nFor the UIKit global plug-in, please enable the corresponding app on your own.\n\nFor the home screen search feature, please enable Spotlight.\n\nRegarding third-party keyboard extensions, please inject the corresponding appex background. (For example, WeChat is wxkb_plugin).\n\nAfter enabling whitelist mode, the blacklist injection tab becomes inactive. QQ, WeChat, Runner, and AppStore can still use the hidden-app blacklist through inject.wantsblacklist.")
                      title:Localized(@"Tips")];
+}
+
+- (void)setWhitelistSortMode:(NSString *)sortMode
+{
+    RHSetCurrentWhitelistSortMode(sortMode);
+    [self updateSortButton];
+    self.appsArray = [self sortApplications:self.applications sortWithStatus:YES];
+    [self reloadSearch];
+    [self.tableView reloadData];
+}
+
+- (UIAlertAction *)sortAlertActionWithTitle:(NSString *)title
+                                       mode:(NSString *)mode
+{
+    BOOL isActive = [RHCurrentWhitelistSortMode() isEqualToString:mode];
+    NSString *displayTitle = isActive ? [NSString stringWithFormat:@"✓ %@", title] : title;
+    return [UIAlertAction actionWithTitle:displayTitle style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        [self setWhitelistSortMode:mode];
+    }];
+}
+
+- (void)presentSortActionSheet
+{
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Sort")
+                                                                   message:nil
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+    [alert addAction:[self sortAlertActionWithTitle:Localized(@"Original RHInject") mode:RHWhitelistSortModeOriginal]];
+    [alert addAction:[self sortAlertActionWithTitle:Localized(@"Alphabetical") mode:RHWhitelistSortModeAlphabetical]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+
+    alert.popoverPresentationController.barButtonItem = self.navigationItem.leftBarButtonItem;
+    alert.popoverPresentationController.sourceView = self.view;
+    alert.popoverPresentationController.sourceRect = CGRectMake(0, 0, 1, 1);
+    [AppDelegate showAlert:alert];
+}
+
+- (void)updateSortButton
+{
+    if (![self isWhitelistRulesController]) {
+        self.navigationItem.leftBarButtonItem = nil;
+        return;
+    }
+
+    if (@available(iOS 14.0, *)) {
+        NSString *currentMode = RHCurrentWhitelistSortMode();
+        UIAction *originalAction = [UIAction actionWithTitle:Localized(@"Original RHInject")
+                                                       image:nil
+                                                  identifier:nil
+                                                     handler:^(__unused UIAction *action) {
+            [self setWhitelistSortMode:RHWhitelistSortModeOriginal];
+        }];
+        originalAction.state = [currentMode isEqualToString:RHWhitelistSortModeOriginal] ? UIMenuElementStateOn : UIMenuElementStateOff;
+
+        UIAction *alphabeticalAction = [UIAction actionWithTitle:Localized(@"Alphabetical")
+                                                           image:nil
+                                                      identifier:nil
+                                                         handler:^(__unused UIAction *action) {
+            [self setWhitelistSortMode:RHWhitelistSortModeAlphabetical];
+        }];
+        alphabeticalAction.state = [currentMode isEqualToString:RHWhitelistSortModeAlphabetical] ? UIMenuElementStateOn : UIMenuElementStateOff;
+
+        UIMenu *menu = [UIMenu menuWithTitle:@""
+                                       image:nil
+                                  identifier:nil
+                                     options:UIMenuOptionsSingleSelection
+                                    children:@[ originalAction, alphabeticalAction ]];
+        UIBarButtonItem *sortItem = [[UIBarButtonItem alloc] initWithTitle:Localized(@"Sort")
+                                                                     style:UIBarButtonItemStylePlain
+                                                                    target:nil
+                                                                    action:nil];
+        sortItem.menu = menu;
+        self.navigationItem.leftBarButtonItem = sortItem;
+    }
+    else {
+        self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:Localized(@"Sort")
+                                                                                 style:UIBarButtonItemStylePlain
+                                                                                target:self
+                                                                                action:@selector(presentSortActionSheet)];
+    }
 }
 
 - (void)viewDidLoad
@@ -1010,6 +1338,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                                                                  target:self
                                                                                  action:@selector(showTips)];
     }
+    [self updateSortButton];
 
     UIRefreshControl *refreshControl = [[UIRefreshControl alloc] init];
     refreshControl.tintColor = [UIColor grayColor];
@@ -1026,6 +1355,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
+    [self updateSortButton];
     self.appsArray = [self sortApplications:self.applications sortWithStatus:YES];
     [self reloadSearch];
     [self.tableView reloadData];
@@ -1089,7 +1419,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     (void)tableView;
     UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"AppRuleCell"];
     AppInfo *app = self.isFiltered ? self.filteredApps[indexPath.row] : self.appsArray[indexPath.row];
-    NSMutableDictionary *rules = [self rulesDictionary];
+    NSDictionary *rules = [self rulesDictionary];
 
     UIImage *icon = app.icon;
     if (icon) {
@@ -1097,14 +1427,27 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     }
 
     cell.textLabel.text = app.name;
-    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@  •  %@", app.bundleIdentifier ?: app.bundleExecutable ?: @"", app.bundleExecutable ?: @"-"];
-    cell.detailTextLabel.numberOfLines = 2;
-    if (app.needsInject && [self.rulesRelativePath isEqualToString:RHRootHideInjectRelativePath]) {
+    NSString *bundleIdentifier = app.bundleIdentifier ?: app.bundleExecutable ?: @"";
+    NSString *bundleExecutable = [self applicationKeyForApp:app] ?: @"-";
+    NSString *detailText = [NSString stringWithFormat:@"%@  •  %@", bundleIdentifier, bundleExecutable];
+    if (app.forcedEnabled) {
+        NSString *forcedDescription = app.isJailApp
+            ? [NSString stringWithFormat:Localized(@"Forced on by whitelist helper: %@"), (app.forcedRuleKey ?: @"/.jbroot")]
+            : [NSString stringWithFormat:Localized(@"Forced on by whitelist helper: %@"), (app.forcedRuleKey ?: @"")];
+        detailText = [NSString stringWithFormat:@"%@\n%@", detailText, forcedDescription];
+    }
+    cell.detailTextLabel.text = detailText;
+    cell.detailTextLabel.numberOfLines = app.forcedEnabled ? 3 : 2;
+    if (app.needsInject && [self isWhitelistRulesController] && !app.forcedEnabled) {
         cell.textLabel.textColor = [UIColor systemRedColor];
+    }
+    else {
+        cell.textLabel.textColor = UIColor.labelColor;
     }
 
     UISwitch *toggle = [[UISwitch alloc] init];
-    toggle.on = RHDictionaryBoolValue(rules[app.bundleExecutable]);
+    toggle.on = app.forcedEnabled || [self isEnabledInRulesForApp:app rules:rules];
+    toggle.enabled = !app.forcedEnabled;
     [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
     cell.accessoryView = toggle;
     return cell;
@@ -1120,11 +1463,16 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
     AppInfo *app = self.isFiltered ? self.filteredApps[indexPath.row] : self.appsArray[indexPath.row];
     NSMutableDictionary *rules = [self rulesDictionary];
-    if (app.bundleExecutable.length == 0) {
+    NSString *appKey = [self applicationKeyForApp:app];
+    if (app.forcedEnabled) {
+        toggle.on = YES;
+        return;
+    }
+    if (appKey.length == 0) {
         return;
     }
 
-    rules[app.bundleExecutable] = @(toggle.on);
+    rules[appKey] = @(toggle.on);
     [AppDelegate writeRootHideDictionary:rules toRelativePath:self.rulesRelativePath];
     [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
 
@@ -1561,7 +1909,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         whitelistController = [[RHAppRulesViewController alloc] initWithTitle:Localized(@"Whitelist")
                                                             rulesRelativePath:RHRootHideInjectRelativePath
                                                                 preferredMode:@"whitelist"
-                                                                   footerText:Localized(@"These executable names are allowed to inject when whitelist mode is active.")
+                                                                   footerText:Localized(@"These executable names are allowed to inject when whitelist mode is active. Locked entries are forced by whitelist helpers and can be reviewed in Settings.")
                                                               showsTipsButton:YES];
     });
     return whitelistController;
@@ -1627,6 +1975,14 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         @{
             @"groupTitle" : Localized(@"Whitelist Helpers"),
             @"items" : @[
+                [self menuItemWithTitle:Localized(@"Whitelist Apps")
+                                 detail:Localized(@"Executables explicitly enabled in cn.zqbb.inject.plist.")
+                                   type:@"controller"
+                                 target:@"whitelistApps"],
+                [self menuItemWithTitle:Localized(@"Forced Whitelist Entries")
+                                 detail:Localized(@"Read-only view of entries forced on by whitelist helpers.")
+                                   type:@"controller"
+                                 target:@"forcedWhitelistEntries"],
                 [self menuItemWithTitle:Localized(@"System Injection Paths")
                                  detail:Localized(@"System executables that may still inject in whitelist mode.")
                                    type:@"controller"
@@ -1728,6 +2084,21 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 {
     if ([target isEqualToString:@"mode"]) {
         return [[RHInjectionModeViewController alloc] initWithStyle:UITableViewStyleInsetGrouped];
+    }
+    if ([target isEqualToString:@"whitelistApps"]) {
+        return [[RHDictionaryToggleViewController alloc] initWithTitle:Localized(@"Whitelist Apps")
+                                                          relativePath:RHRootHideInjectRelativePath
+                                                              defaults:@{}
+                                                            footerText:Localized(@"These executable names are explicitly enabled in whitelist mode.")
+                                                         addEntryTitle:Localized(@"Add to Whitelist")
+                                                       addEntryMessage:Localized(@"Enter an executable name that should be explicitly enabled in whitelist mode.")
+                                                   addEntryPlaceholder:Localized(@"Executable name")];
+    }
+    if ([target isEqualToString:@"forcedWhitelistEntries"]) {
+        RHForcedEntriesViewController *controller = [[RHForcedEntriesViewController alloc] initWithStyle:UITableViewStyleInsetGrouped];
+        controller.title = Localized(@"Forced Whitelist Entries");
+        controller.footerText = Localized(@"These entries are forced on by whitelist helpers and appear locked in the whitelist app browser.");
+        return controller;
     }
     if ([target isEqualToString:@"systemInjection"]) {
         return [[RHDictionaryToggleViewController alloc] initWithTitle:Localized(@"System Injection Paths")

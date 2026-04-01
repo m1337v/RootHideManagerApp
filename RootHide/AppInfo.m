@@ -243,6 +243,8 @@
     app.displayIcon = icon;
     app.needsInject = needsInject;
     app.isJailApp = isJailApp;
+    app.forcedEnabled = NO;
+    app.forcedRuleKey = nil;
     return app;
 }
 
