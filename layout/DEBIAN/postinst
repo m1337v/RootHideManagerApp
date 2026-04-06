@@ -1,5 +1,13 @@
 #!/bin/sh
 
+rm -f /var/mobile/Library/RootHide/cn.zqbb.inject.mode.plist
+rm -f /var/mobile/Library/RootHide/cn.zqbb.inject.plist
+rm -f /var/mobile/Library/RootHide/cn.zqbb.inject.system.plist
+rm -f /var/mobile/Library/RootHide/cn.zqbb.inject.wantsblacklist.plist
+rm -f /var/mobile/Library/RootHide/cn.zqbb.jetsam.addend.plist
+rm -f /var/mobile/Library/RootHide/cn.zqbb.uninject.plist
+rm -f /var/mobile/zp.unject.plist
+
 uicache -p /Applications/RHInject.app
 chown 0:0 /Applications/RHInject.app/RHInject
 chmod +s /Applications/RHInject.app/RHInject

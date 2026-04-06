@@ -17,17 +17,17 @@
 NSString * const RHInjectSettingsChangedNotification = @"m1337.rhinject.settingsChanged";
 
 static NSString * const RHRootHideDirectoryRelativePath = @"/var/mobile/Library/RootHide";
-static NSString * const RHRootHideModeRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.mode.plist";
-static NSString * const RHRootHideInjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.plist";
-static NSString * const RHRootHideInjectSystemRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.system.plist";
-static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.wantsblacklist.plist";
-static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.jetsam.addend.plist";
-static NSString * const RHRootHideUninjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.uninject.plist";
-static NSString * const RHRootHideLegacyUninjectPath = @"/var/mobile/zp.unject.plist";
+static NSString * const RHRootHideModeRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.mode.plist";
+static NSString * const RHRootHideInjectRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.plist";
+static NSString * const RHRootHideInjectSystemRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.system.plist";
+static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.wantsblacklist.plist";
+static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.jetsam.addend.plist";
+static NSString * const RHRootHideUninjectRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.uninject.plist";
+static NSString * const RHRootHideHiddenWhitelistTweaksRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.hiddenwhitelist.tweaks.plist";
 
 static NSString *RootHideNormalizeInjectionMode(NSString *mode)
 {
-    if ([mode isEqualToString:@"stock"] || [mode isEqualToString:@"blacklist"] || [mode isEqualToString:@"whitelist"]) {
+    if ([mode isEqualToString:@"stock"] || [mode isEqualToString:@"blacklist"] || [mode isEqualToString:@"whitelist"] || [mode isEqualToString:@"hiddenwhitelist"]) {
         return mode;
     }
     return nil;
@@ -39,12 +39,6 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
     NSString *jbrootPath = jbroot(relativePath);
     if (jbrootPath.length > 0) {
         [paths addObject:jbrootPath];
-    }
-    if (relativePath.length > 0 && ![paths containsObject:relativePath]) {
-        [paths addObject:relativePath];
-    }
-    if ([relativePath isEqualToString:RHRootHideUninjectRelativePath] && ![paths containsObject:RHRootHideLegacyUninjectPath]) {
-        [paths addObject:RHRootHideLegacyUninjectPath];
     }
     return paths;
 }
@@ -67,18 +61,18 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
     }
 
     UINavigationController *whitelistNavigationController = tabBarController.viewControllers[1];
-    UINavigationController *blacklistNavigationController = tabBarController.viewControllers[2];
+    UINavigationController *hiddenWhitelistNavigationController = tabBarController.viewControllers[2];
 
     NSString *mode = AppDelegate.rootHideInjectionMode;
-    BOOL whitelistEnabled = ![mode isEqualToString:@"blacklist"];
-    BOOL blacklistEnabled = ![mode isEqualToString:@"whitelist"];
+    BOOL whitelistEnabled = [mode isEqualToString:@"whitelist"] || [mode isEqualToString:@"hiddenwhitelist"];
+    BOOL hiddenWhitelistEnabled = [mode isEqualToString:@"hiddenwhitelist"];
 
     whitelistNavigationController.tabBarItem.enabled = whitelistEnabled;
-    blacklistNavigationController.tabBarItem.enabled = blacklistEnabled;
+    hiddenWhitelistNavigationController.tabBarItem.enabled = hiddenWhitelistEnabled;
 
     UIViewController *selectedController = tabBarController.selectedViewController;
     if ((!whitelistEnabled && selectedController == whitelistNavigationController)
-        || (!blacklistEnabled && selectedController == blacklistNavigationController)) {
+        || (!hiddenWhitelistEnabled && selectedController == hiddenWhitelistNavigationController)) {
         tabBarController.selectedIndex = 4;
     }
 }
@@ -105,28 +99,25 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
 
 + (NSString *)rootHideInjectionMode
 {
-    NSDictionary *modeConfiguration = [NSDictionary dictionaryWithContentsOfFile:[self rootHidePathForRelativePath:RHRootHideModeRelativePath]];
+    NSDictionary *modeConfiguration = [self rootHideDictionaryForRelativePath:RHRootHideModeRelativePath createIfNeeded:NO defaults:nil];
     NSString *configuredMode = RootHideNormalizeInjectionMode(modeConfiguration[@"mode"]);
     if (configuredMode) {
         return configuredMode;
     }
 
-    if ([[NSFileManager defaultManager] fileExistsAtPath:[self rootHidePathForRelativePath:RHRootHideInjectRelativePath]]) {
-        return @"whitelist";
+    for (NSString *path in RootHideCandidatePaths(RHRootHideUninjectRelativePath)) {
+        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+            return @"blacklist";
+        }
     }
 
-    if ([[NSFileManager defaultManager] fileExistsAtPath:[self rootHidePathForRelativePath:RHRootHideUninjectRelativePath]]
-        || [[NSFileManager defaultManager] fileExistsAtPath:RHRootHideLegacyUninjectPath]) {
-        return @"blacklist";
+    for (NSString *path in RootHideCandidatePaths(RHRootHideInjectRelativePath)) {
+        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+            return @"whitelist";
+        }
     }
 
     return @"stock";
-}
-
-+ (NSString *)rootHidePathForRelativePath:(NSString *)relativePath
-{
-    NSString *path = jbroot(relativePath);
-    return path.length > 0 ? path : relativePath;
 }
 
 + (void)ensureRootHideDirectoryExists
@@ -141,6 +132,12 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
         [[NSFileManager defaultManager] createDirectoryAtPath:rootHidePath withIntermediateDirectories:YES attributes:directoryAttributes error:nil];
     }
     [[NSFileManager defaultManager] setAttributes:directoryAttributes ofItemAtPath:rootHidePath error:nil];
+}
+
++ (NSString *)rootHidePathForRelativePath:(NSString *)relativePath
+{
+    NSString *path = jbroot(relativePath);
+    return path.length > 0 ? path : relativePath;
 }
 
 + (NSMutableDictionary *)rootHideDictionaryForRelativePath:(NSString *)relativePath
@@ -193,11 +190,6 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
     NSDictionary *safeDictionary = dictionary ?: @{};
     [safeDictionary writeToFile:resolvedPath atomically:YES];
     [[NSFileManager defaultManager] setAttributes:fileAttributes ofItemAtPath:resolvedPath error:nil];
-
-    if ([relativePath isEqualToString:RHRootHideUninjectRelativePath]) {
-        [safeDictionary writeToFile:RHRootHideLegacyUninjectPath atomically:YES];
-        [[NSFileManager defaultManager] setAttributes:fileAttributes ofItemAtPath:RHRootHideLegacyUninjectPath error:nil];
-    }
 }
 
 + (void)setRootHideInjectionMode:(NSString *)mode
@@ -210,7 +202,7 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
 + (NSString *)activeInjectionRulesRelativePath
 {
     NSString *mode = self.rootHideInjectionMode;
-    if ([mode isEqualToString:@"whitelist"]) {
+    if ([mode isEqualToString:@"whitelist"] || [mode isEqualToString:@"hiddenwhitelist"]) {
         return RHRootHideInjectRelativePath;
     }
     if ([mode isEqualToString:@"blacklist"]) {
@@ -279,10 +271,14 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
 {
     NSString *mode = self.rootHideInjectionMode;
     [self rootHideDictionaryForRelativePath:RHRootHideJetsamAddendRelativePath createIfNeeded:YES defaults:[self defaultJetsamAddend]];
-    if ([mode isEqualToString:@"whitelist"]) {
+    if ([mode isEqualToString:@"whitelist"] || [mode isEqualToString:@"hiddenwhitelist"]) {
         [self rootHideDictionaryForRelativePath:RHRootHideInjectRelativePath createIfNeeded:YES defaults:@{}];
         [self rootHideDictionaryForRelativePath:RHRootHideInjectSystemRelativePath createIfNeeded:YES defaults:[self defaultSystemInjection]];
         [self rootHideDictionaryForRelativePath:RHRootHideInjectWantsBlacklistRelativePath createIfNeeded:YES defaults:[self defaultWantsBlacklist]];
+        if ([mode isEqualToString:@"hiddenwhitelist"]) {
+            [self rootHideDictionaryForRelativePath:RHRootHideUninjectRelativePath createIfNeeded:YES defaults:@{}];
+            [self rootHideDictionaryForRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath createIfNeeded:YES defaults:@{}];
+        }
     }
     else if ([mode isEqualToString:@"blacklist"]) {
         [self rootHideDictionaryForRelativePath:RHRootHideUninjectRelativePath createIfNeeded:YES defaults:@{}];
@@ -430,21 +426,21 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
     
     BlacklistViewController *listController = [BlacklistViewController sharedInstance];
     UIViewController *whitelistController = [SettingViewController whitelistController];
-    UIViewController *blacklistController = [SettingViewController blacklistController];
+    UIViewController *hiddenWhitelistController = [SettingViewController hiddenWhitelistController];
     varCleanController *cleanController = [varCleanController sharedInstance];
     SettingViewController *setController = [SettingViewController sharedInstance];
     
     
-    listController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"RootHide",@"") image:[UIImage systemImageNamed:@"list.bullet.circle"] tag:0];
+    listController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Classic RootHide",@"") image:[UIImage systemImageNamed:@"list.bullet.circle"] tag:0];
     whitelistController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Whitelist",@"") image:[UIImage systemImageNamed:@"checkmark.circle"] tag:1];
-    blacklistController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Blacklist",@"") image:[UIImage systemImageNamed:@"nosign"] tag:2];
+    hiddenWhitelistController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Hidden Whitelist",@"") image:[UIImage systemImageNamed:@"eye.slash.circle"] tag:2];
     cleanController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"varClean",@"") image:[UIImage systemImageNamed:@"trash"] tag:3];
     setController.tabBarItem = [[UITabBarItem alloc] initWithTitle:NSLocalizedString(@"Settings",@"") image:[UIImage systemImageNamed:@"gearshape"] tag:4];
     
 
     UINavigationController *listNavigationController = [[UINavigationController alloc] initWithRootViewController:listController];
     UINavigationController *whitelistNavigationController = [[UINavigationController alloc] initWithRootViewController:whitelistController];
-    UINavigationController *blacklistNavigationController = [[UINavigationController alloc] initWithRootViewController:blacklistController];
+    UINavigationController *hiddenWhitelistNavigationController = [[UINavigationController alloc] initWithRootViewController:hiddenWhitelistController];
     UINavigationController *cleanNavigationController = [[UINavigationController alloc] initWithRootViewController:cleanController];
     UINavigationController *setNavigationController = [[UINavigationController alloc] initWithRootViewController:setController];
     
@@ -454,7 +450,7 @@ static NSArray<NSString *> *RootHideCandidatePaths(NSString *relativePath)
     tabBarController.viewControllers = @[
         listNavigationController,
         whitelistNavigationController,
-        blacklistNavigationController,
+        hiddenWhitelistNavigationController,
         cleanNavigationController,
         setNavigationController
     ];

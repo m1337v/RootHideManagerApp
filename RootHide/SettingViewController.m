@@ -2,16 +2,19 @@
 #import "AppDelegate.h"
 #import "AppInfo.h"
 
-static NSString * const RHRootHideInjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.plist";
-static NSString * const RHRootHideUninjectRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.uninject.plist";
-static NSString * const RHRootHideInjectSystemRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.system.plist";
-static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.inject.wantsblacklist.plist";
-static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/cn.zqbb.jetsam.addend.plist";
+static NSString * const RHRootHideInjectRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.plist";
+static NSString * const RHRootHideUninjectRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.uninject.plist";
+static NSString * const RHRootHideInjectSystemRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.system.plist";
+static NSString * const RHRootHideInjectWantsBlacklistRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.inject.wantsblacklist.plist";
+static NSString * const RHRootHideJetsamAddendRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.jetsam.addend.plist";
 static NSString * const RHVarCleanRulesRelativePath = @"/var/mobile/Library/RootHide/varCleanRules.plist";
 static NSString * const RHVarCleanCustomRulesRelativePath = @"/var/mobile/Library/RootHide/varCleanRules-custom.plist";
+static NSString * const RHRootHideHiddenWhitelistTweaksRelativePath = @"/var/mobile/Library/RootHide/pro.m1337.hiddenwhitelist.tweaks.plist";
 static NSString * const RHWhitelistSortModeDefaultsKey = @"m1337.rhinject.whitelistSortMode";
 static NSString * const RHWhitelistSortModeOriginal = @"original";
 static NSString * const RHWhitelistSortModeAlphabetical = @"alphabetical";
+static NSInteger const RHHiddenTweakAllowMode = 1;
+static NSInteger const RHHiddenTweakDenyMode = 2;
 
 void killAllForBundle(const char *bundlePath);
 int spawnRoot(NSString* path, NSArray* args, NSString** stdOut, NSString** stdErr);
@@ -57,6 +60,9 @@ static BOOL RHPathIsDefaultInstallationPath(NSString *path)
 
 static NSString *RHModeDisplayName(NSString *mode)
 {
+    if ([mode isEqualToString:@"hiddenwhitelist"]) {
+        return Localized(@"Hidden Whitelist");
+    }
     if ([mode isEqualToString:@"whitelist"]) {
         return Localized(@"Whitelist");
     }
@@ -68,6 +74,9 @@ static NSString *RHModeDisplayName(NSString *mode)
 
 static NSString *RHVarCleanModeDisplayName(NSString *mode)
 {
+    if ([mode isEqualToString:@"hiddenwhitelist"]) {
+        return Localized(@"Hidden Whitelist");
+    }
     if ([mode isEqualToString:@"whitelist"]) {
         return Localized(@"Whitelist");
     }
@@ -169,6 +178,62 @@ static NSArray<NSString *> *RHUniqStrings(NSArray<NSString *> *values)
     return ordered.array;
 }
 
+static NSArray<NSString *> *RHNormalizedStringArray(id values)
+{
+    if (![values isKindOfClass:[NSArray class]]) {
+        return @[];
+    }
+
+    NSMutableOrderedSet<NSString *> *orderedValues = [NSMutableOrderedSet orderedSet];
+    for (id value in (NSArray *)values) {
+        if (![value isKindOfClass:[NSString class]]) {
+            continue;
+        }
+
+        NSString *trimmedValue = [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (trimmedValue.length > 0) {
+            [orderedValues addObject:trimmedValue];
+        }
+    }
+    return orderedValues.array;
+}
+
+static NSString *RHTweakSelectionSummary(NSUInteger tweakCount)
+{
+    if (tweakCount == 0) {
+        return Localized(@"No tweaks selected");
+    }
+    if (tweakCount == 1) {
+        return Localized(@"1 tweak selected");
+    }
+    return [NSString stringWithFormat:Localized(@"%lu tweaks selected"), (unsigned long)tweakCount];
+}
+
+static NSDictionary *RHHiddenWhitelistSettingsEntryForApp(AppInfo *app, NSDictionary *allSettings)
+{
+    if (![allSettings isKindOfClass:[NSDictionary class]]) {
+        return nil;
+    }
+
+    NSString *bundleIdentifier = app.bundleIdentifier ?: @"";
+    if (bundleIdentifier.length > 0) {
+        NSDictionary *entry = [allSettings[bundleIdentifier] isKindOfClass:[NSDictionary class]] ? allSettings[bundleIdentifier] : nil;
+        if (entry) {
+            return entry;
+        }
+    }
+
+    NSString *bundleExecutable = app.bundleExecutable ?: app.zqbbExecutable ?: @"";
+    if (bundleExecutable.length > 0) {
+        NSDictionary *entry = [allSettings[bundleExecutable] isKindOfClass:[NSDictionary class]] ? allSettings[bundleExecutable] : nil;
+        if (entry) {
+            return entry;
+        }
+    }
+
+    return nil;
+}
+
 static NSDictionary *RHInfoDictionaryForBundlePath(NSString *bundlePath)
 {
     if (bundlePath.length == 0) {
@@ -254,6 +319,33 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                 preferredMode:(NSString *)preferredMode
                    footerText:(NSString *)footerText
               showsTipsButton:(BOOL)showsTipsButton;
+- (NSMutableDictionary *)rulesDictionary;
+- (NSArray<AppInfo *> *)loadApplications;
+- (NSString *)applicationKeyForApp:(AppInfo *)app;
+- (AppInfo *)appAtIndexPath:(NSIndexPath *)indexPath;
+- (BOOL)isEnabledInRulesForApp:(AppInfo *)app rules:(NSDictionary *)rules;
+- (BOOL)isRootHideHiddenApp:(AppInfo *)app;
+- (UIImage *)scaledImage:(UIImage *)image size:(CGSize)size;
+@end
+
+@interface RHTweakInfo : NSObject
+@property (nonatomic, copy) NSString *dylibName;
+@property (nonatomic, copy) NSArray<NSString *> *filterBundles;
+@property (nonatomic, copy) NSArray<NSString *> *filterExecutables;
+@property (nonatomic, copy) NSString *filterNote;
++ (NSArray<RHTweakInfo *> *)availableTweaksForApp:(AppInfo *)app;
+@end
+
+@interface RHTweakSelectionViewController : UITableViewController
+@property (nonatomic, retain) AppInfo *app;
+@property (nonatomic, copy) NSString *settingsKey;
+@property (nonatomic, retain) NSArray<RHTweakInfo *> *tweaks;
+@property (nonatomic, retain) NSMutableDictionary *allSettings;
+@property (nonatomic, retain) NSMutableDictionary *settingsForApp;
+- (instancetype)initWithApp:(AppInfo *)app;
+@end
+
+@interface RHHiddenWhitelistViewController : RHAppRulesViewController
 @end
 
 @interface RHVarCleanPathViewController : UITableViewController
@@ -269,6 +361,20 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 @property (nonatomic, retain) NSDictionary *baseRules;
 @property (nonatomic, retain) NSMutableDictionary *customRules;
 @property (nonatomic, copy) NSArray<NSString *> *sortedPaths;
+@end
+
+// Generic plist viewer — shows key/value pairs for any flat or nested dictionary plist.
+// Flat booleans get toggles, flat numbers/strings are editable, nested dictionaries push.
+@interface RHGenericPlistViewController : UITableViewController
+@property (nonatomic, copy) NSString *plistTitle;
+@property (nonatomic, copy) NSString *relativePath;
+@property (nonatomic, copy) NSString *footerText;
+@property (nonatomic, retain) NSMutableDictionary *dictionary;
+@property (nonatomic, copy) NSArray<NSString *> *sortedKeys;
+// For nested views: the parent VC and the key under which this dict lives.
+@property (nonatomic, weak) RHGenericPlistViewController *parentPlistVC;
+@property (nonatomic, copy) NSString *parentKey;
+- (instancetype)initWithTitle:(NSString *)title relativePath:(NSString *)relativePath footerText:(NSString *)footerText;
 @end
 
 @interface SettingViewController ()
@@ -299,6 +405,11 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
             @"mode" : @"whitelist",
             @"title" : Localized(@"Whitelist"),
             @"detail" : Localized(@"Only inject selected executables and approved system paths."),
+        },
+        @{
+            @"mode" : @"hiddenwhitelist",
+            @"title" : Localized(@"Hidden Whitelist"),
+            @"detail" : Localized(@"Only inject selected executables for apps that are also marked hidden in the RootHide tab. Use the Hidden Whitelist tab to pick which tweaks may load."),
         },
     ];
 }
@@ -778,6 +889,12 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     return [AppDelegate rootHideDictionaryForRelativePath:self.rulesRelativePath createIfNeeded:YES defaults:@{}];
 }
 
+- (NSMutableDictionary *)rootHideHiddenAppsDictionary
+{
+    NSMutableDictionary *appconfig = [AppDelegate getDefaultsForKey:@"appconfig"];
+    return [appconfig isKindOfClass:[NSMutableDictionary class]] ? appconfig : [appconfig mutableCopy] ?: [NSMutableDictionary dictionary];
+}
+
 - (BOOL)isWhitelistRulesController
 {
     return [self.rulesRelativePath isEqualToString:RHRootHideInjectRelativePath];
@@ -802,6 +919,19 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
         return app.zqbbExecutable;
     }
     return app.zqbbIdentifier;
+}
+
+- (AppInfo *)appAtIndexPath:(NSIndexPath *)indexPath
+{
+    return self.isFiltered ? self.filteredApps[indexPath.row] : self.appsArray[indexPath.row];
+}
+
+- (BOOL)isRootHideHiddenApp:(AppInfo *)app
+{
+    if (app.bundleIdentifier.length == 0) {
+        return NO;
+    }
+    return RHDictionaryBoolValue([self rootHideHiddenAppsDictionary][app.bundleIdentifier]);
 }
 
 - (NSString *)displayTokenForSystemRuleKey:(NSString *)ruleKey
@@ -1170,8 +1300,10 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                 return [@(enabled2) compare:@(enabled1)];
             }
 
+            // Within enabled apps, show user-toggled entries first,
+            // forced/auto-activated (greyed out) entries after.
             if (app1.forcedEnabled != app2.forcedEnabled) {
-                return [@(app2.forcedEnabled) compare:@(app1.forcedEnabled)];
+                return [@(app1.forcedEnabled) compare:@(app2.forcedEnabled)];
             }
 
             if (app1.needsInject != app2.needsInject) {
@@ -1474,6 +1606,30 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
     rules[appKey] = @(toggle.on);
     [AppDelegate writeRootHideDictionary:rules toRelativePath:self.rulesRelativePath];
+
+    // When disabling an app in whitelist mode, also remove any stale
+    // hidden whitelist tweak selections so launchdhook doesn't mistakenly
+    // activate hidden injection for a blacklist-only app.
+    if (!toggle.on && [self isWhitelistRulesController]) {
+        NSMutableDictionary *hiddenTweakSettings = [AppDelegate rootHideDictionaryForRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath createIfNeeded:NO defaults:nil];
+        if (hiddenTweakSettings) {
+            NSString *bundleId = app.bundleIdentifier ?: @"";
+            NSString *execName = app.bundleExecutable ?: @"";
+            BOOL changed = NO;
+            if (bundleId.length > 0 && hiddenTweakSettings[bundleId]) {
+                [hiddenTweakSettings removeObjectForKey:bundleId];
+                changed = YES;
+            }
+            if (execName.length > 0 && hiddenTweakSettings[execName]) {
+                [hiddenTweakSettings removeObjectForKey:execName];
+                changed = YES;
+            }
+            if (changed) {
+                [AppDelegate writeRootHideDictionary:hiddenTweakSettings toRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath];
+            }
+        }
+    }
+
     [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
 
     if (app.bundleURL.path.length > 0) {
@@ -1483,6 +1639,361 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     self.appsArray = [self sortApplications:self.applications sortWithStatus:YES];
     [self reloadSearch];
     [self.tableView reloadData];
+}
+
+@end
+
+@implementation RHTweakInfo
+
++ (NSArray<NSString *> *)possibleInjectionLibrariesPaths
+{
+    return RHUniqStrings(@[
+        [AppDelegate rootHidePathForRelativePath:@"/Library/MobileSubstrate/DynamicLibraries"] ?: @"",
+        [AppDelegate rootHidePathForRelativePath:@"/usr/lib/TweakInject"] ?: @"",
+    ]);
+}
+
++ (NSSet<NSString *> *)hiddenWhitelistExcludedTweaks
+{
+    static NSSet<NSString *> *excludedTweaks;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        excludedTweaks = [NSSet setWithArray:@[
+            @"Choicy",
+            @"ChoicySB",
+            @"MobileSafety",
+            @"PreferenceLoader",
+            @"preferred",
+        ]];
+    });
+    return excludedTweaks;
+}
+
++ (BOOL)matchesApp:(AppInfo *)app filterBundles:(NSArray<NSString *> *)filterBundles filterExecutables:(NSArray<NSString *> *)filterExecutables
+{
+    NSString *bundleIdentifier = app.bundleIdentifier ?: @"";
+    NSString *bundleExecutable = app.bundleExecutable ?: app.zqbbExecutable ?: @"";
+
+    if (filterBundles.count == 0 && filterExecutables.count == 0) {
+        return YES;
+    }
+    if (bundleIdentifier.length > 0 && [filterBundles containsObject:bundleIdentifier]) {
+        return YES;
+    }
+    if (bundleExecutable.length > 0 && [filterExecutables containsObject:bundleExecutable]) {
+        return YES;
+    }
+    return NO;
+}
+
++ (NSArray<RHTweakInfo *> *)availableTweaksForApp:(AppInfo *)app
+{
+    NSMutableArray<RHTweakInfo *> *tweaks = [NSMutableArray array];
+    NSMutableSet<NSString *> *seenDylibNames = [NSMutableSet set];
+
+    for (NSString *directoryPath in [self possibleInjectionLibrariesPaths]) {
+        NSArray<NSString *> *entries = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:directoryPath error:nil];
+        for (NSString *entry in entries) {
+            if (![[entry pathExtension].lowercaseString isEqualToString:@"dylib"]) {
+                continue;
+            }
+
+            NSString *dylibName = entry.stringByDeletingPathExtension;
+            if (dylibName.length == 0 || [[self hiddenWhitelistExcludedTweaks] containsObject:dylibName] || [seenDylibNames containsObject:dylibName]) {
+                continue;
+            }
+
+            NSString *plistPath = [[directoryPath stringByAppendingPathComponent:dylibName] stringByAppendingPathExtension:@"plist"];
+            NSDictionary *plist = [NSDictionary dictionaryWithContentsOfFile:plistPath];
+            NSDictionary *filter = [plist[@"Filter"] isKindOfClass:[NSDictionary class]] ? plist[@"Filter"] : nil;
+            NSArray<NSString *> *filterBundles = RHNormalizedStringArray(filter[@"Bundles"]);
+            NSArray<NSString *> *filterExecutables = RHNormalizedStringArray(filter[@"Executables"]);
+            BOOL hasPlistMetadata = [[NSFileManager defaultManager] fileExistsAtPath:plistPath];
+            BOOL matchesApp = [self matchesApp:app filterBundles:filterBundles filterExecutables:filterExecutables];
+
+            RHTweakInfo *tweakInfo = [[RHTweakInfo alloc] init];
+            tweakInfo.dylibName = dylibName;
+            tweakInfo.filterBundles = filterBundles ?: @[];
+            tweakInfo.filterExecutables = filterExecutables ?: @[];
+            if (!hasPlistMetadata) {
+                tweakInfo.filterNote = Localized(@"No plist filter metadata");
+            }
+            else if (filterBundles.count == 0 && filterExecutables.count == 0) {
+                tweakInfo.filterNote = Localized(@"Global filter");
+            }
+            else if (!matchesApp) {
+                tweakInfo.filterNote = Localized(@"Filter does not match this app");
+            }
+            [tweaks addObject:tweakInfo];
+            [seenDylibNames addObject:dylibName];
+        }
+    }
+
+    [tweaks sortUsingComparator:^NSComparisonResult(RHTweakInfo *left, RHTweakInfo *right) {
+        return [left.dylibName localizedStandardCompare:right.dylibName];
+    }];
+    return tweaks;
+}
+
+@end
+
+@implementation RHTweakSelectionViewController
+
+- (instancetype)initWithApp:(AppInfo *)app
+{
+    self = [super initWithStyle:UITableViewStyleInsetGrouped];
+    if (self) {
+        self.app = app;
+        self.settingsKey = app.bundleIdentifier.length > 0 ? app.bundleIdentifier : app.bundleExecutable;
+        self.title = app.name;
+    }
+    return self;
+}
+
+- (void)reloadConfiguration
+{
+    self.allSettings = [AppDelegate rootHideDictionaryForRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath createIfNeeded:YES defaults:@{}];
+
+    NSDictionary *storedSettings = [self.allSettings[self.settingsKey] isKindOfClass:[NSDictionary class]] ? self.allSettings[self.settingsKey] : nil;
+    NSMutableDictionary *settings = storedSettings.mutableCopy ?: [NSMutableDictionary dictionary];
+
+    NSInteger allowDenyMode = RHDictionaryIntegerValue(settings[@"allowDenyMode"], RHHiddenTweakAllowMode);
+    if (allowDenyMode != RHHiddenTweakDenyMode) {
+        allowDenyMode = RHHiddenTweakAllowMode;
+    }
+
+    settings[@"allowDenyMode"] = @(allowDenyMode);
+    settings[@"allowedTweaks"] = RHNormalizedStringArray(settings[@"allowedTweaks"]);
+    settings[@"deniedTweaks"] = RHNormalizedStringArray(settings[@"deniedTweaks"]);
+
+    self.settingsForApp = settings;
+    self.tweaks = [RHTweakInfo availableTweaksForApp:self.app];
+}
+
+- (void)persistConfiguration
+{
+    NSArray<NSString *> *allowedTweaks = RHNormalizedStringArray(self.settingsForApp[@"allowedTweaks"]);
+    NSArray<NSString *> *deniedTweaks = RHNormalizedStringArray(self.settingsForApp[@"deniedTweaks"]);
+    NSInteger allowDenyMode = RHDictionaryIntegerValue(self.settingsForApp[@"allowDenyMode"], RHHiddenTweakAllowMode);
+
+    if (allowDenyMode != RHHiddenTweakDenyMode) {
+        allowDenyMode = RHHiddenTweakAllowMode;
+    }
+
+    if (allowedTweaks.count == 0 && deniedTweaks.count == 0) {
+        [self.allSettings removeObjectForKey:self.settingsKey];
+    }
+    else {
+        self.allSettings[self.settingsKey] = @{
+            @"allowDenyMode" : @(allowDenyMode),
+            @"allowedTweaks" : allowedTweaks,
+            @"deniedTweaks" : deniedTweaks,
+        };
+    }
+
+    [AppDelegate writeRootHideDictionary:self.allSettings toRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath];
+    [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
+
+    if (self.app.bundleURL.path.length > 0) {
+        killAllForBundle(self.app.bundleURL.path.UTF8String);
+    }
+}
+
+- (BOOL)isTweakEnabled:(RHTweakInfo *)tweakInfo
+{
+    NSString *key = tweakInfo.dylibName ?: @"";
+    NSInteger allowDenyMode = RHDictionaryIntegerValue(self.settingsForApp[@"allowDenyMode"], RHHiddenTweakAllowMode);
+    if (allowDenyMode == RHHiddenTweakDenyMode) {
+        return [RHNormalizedStringArray(self.settingsForApp[@"deniedTweaks"]) containsObject:key];
+    }
+    return [RHNormalizedStringArray(self.settingsForApp[@"allowedTweaks"]) containsObject:key];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.navigationController.navigationBar.hidden = NO;
+    self.tableView.tableFooterView = [[UIView alloc] init];
+    [self reloadConfiguration];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self reloadConfiguration];
+    [self.tableView reloadData];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    (void)tableView;
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    (void)tableView;
+    return (section == 0) ? 1 : self.tweaks.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
+{
+    (void)tableView;
+    return (section == 0) ? Localized(@"Mode") : Localized(@"Tweaks");
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    (void)tableView;
+    if (section == 0) {
+        return Localized(@"Choose whether the listed tweaks are explicitly allowed or explicitly denied when hidden injection loads TweakLoader for this app.");
+    }
+    if (self.tweaks.count == 0) {
+        return Localized(@"No tweak dylibs were found in the standard injection directories.");
+    }
+    return Localized(@"All tweak dylibs found in the standard injection directories are listed here. Hidden Whitelist only uses the names you explicitly select.");
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"HiddenTweakCell"];
+
+    if (indexPath.section == 0) {
+        cell.textLabel.text = Localized(@"Per-app hidden tweak filter");
+        cell.detailTextLabel.text = Localized(@"This stays separate from Choicy. Hidden Whitelist uses it to decide which tweak dylibs may load.");
+        cell.detailTextLabel.numberOfLines = 2;
+
+        UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[ Localized(@"Allow"), Localized(@"Deny") ]];
+        segmentedControl.selectedSegmentIndex = RHDictionaryIntegerValue(self.settingsForApp[@"allowDenyMode"], RHHiddenTweakAllowMode) == RHHiddenTweakDenyMode ? 1 : 0;
+        [segmentedControl addTarget:self action:@selector(modeChanged:) forControlEvents:UIControlEventValueChanged];
+        cell.accessoryView = segmentedControl;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return cell;
+    }
+
+    RHTweakInfo *tweakInfo = self.tweaks[indexPath.row];
+    cell.textLabel.text = tweakInfo.dylibName;
+
+    NSMutableArray<NSString *> *detailParts = [NSMutableArray array];
+    if (tweakInfo.filterBundles.count > 0) {
+        [detailParts addObject:[NSString stringWithFormat:@"B: %@", [tweakInfo.filterBundles componentsJoinedByString:@", "]]];
+    }
+    if (tweakInfo.filterExecutables.count > 0) {
+        [detailParts addObject:[NSString stringWithFormat:@"E: %@", [tweakInfo.filterExecutables componentsJoinedByString:@", "]]];
+    }
+    if (tweakInfo.filterNote.length > 0) {
+        [detailParts addObject:tweakInfo.filterNote];
+    }
+    cell.detailTextLabel.text = detailParts.count > 0 ? [detailParts componentsJoinedByString:@"\n"] : Localized(@"Global filter");
+    cell.detailTextLabel.numberOfLines = detailParts.count > 1 ? 3 : 1;
+
+    UISwitch *toggle = [[UISwitch alloc] init];
+    toggle.on = [self isTweakEnabled:tweakInfo];
+    toggle.tag = indexPath.row;
+    [toggle addTarget:self action:@selector(toggleChanged:) forControlEvents:UIControlEventValueChanged];
+    cell.accessoryView = toggle;
+    return cell;
+}
+
+- (void)modeChanged:(UISegmentedControl *)segmentedControl
+{
+    self.settingsForApp[@"allowDenyMode"] = @(segmentedControl.selectedSegmentIndex == 1 ? RHHiddenTweakDenyMode : RHHiddenTweakAllowMode);
+    [self persistConfiguration];
+    [self.tableView reloadData];
+}
+
+- (void)toggleChanged:(UISwitch *)toggle
+{
+    if (toggle.tag < 0 || toggle.tag >= self.tweaks.count) {
+        return;
+    }
+
+    RHTweakInfo *tweakInfo = self.tweaks[toggle.tag];
+    NSString *key = tweakInfo.dylibName ?: @"";
+    NSInteger allowDenyMode = RHDictionaryIntegerValue(self.settingsForApp[@"allowDenyMode"], RHHiddenTweakAllowMode);
+    NSString *listKey = (allowDenyMode == RHHiddenTweakDenyMode) ? @"deniedTweaks" : @"allowedTweaks";
+    NSMutableOrderedSet<NSString *> *names = [NSMutableOrderedSet orderedSetWithArray:RHNormalizedStringArray(self.settingsForApp[listKey])];
+
+    if (toggle.on) {
+        [names addObject:key];
+    }
+    else {
+        [names removeObject:key];
+    }
+
+    self.settingsForApp[listKey] = names.array;
+    [self persistConfiguration];
+    [self.tableView reloadData];
+}
+
+@end
+
+@implementation RHHiddenWhitelistViewController
+
+- (instancetype)init
+{
+    self = [super initWithTitle:Localized(@"Hidden Whitelist")
+              rulesRelativePath:RHRootHideInjectRelativePath
+                  preferredMode:@"hiddenwhitelist"
+                     footerText:Localized(@"Apps shown here are both hidden in Classic RootHide and enabled in Whitelist. Tap an app to choose which tweaks may load in hidden mode.")
+                showsTipsButton:NO];
+    return self;
+}
+
+- (NSArray<AppInfo *> *)loadApplications
+{
+    NSArray<AppInfo *> *applications = [super loadApplications];
+    NSDictionary *rules = [self rulesDictionary];
+
+    NSMutableArray<AppInfo *> *filteredApplications = [NSMutableArray array];
+    for (AppInfo *app in applications) {
+        if (app.forcedEnabled || app.bundleIdentifier.length == 0) {
+            continue;
+        }
+        if (![self isRootHideHiddenApp:app]) {
+            continue;
+        }
+        if (![self isEnabledInRulesForApp:app rules:rules]) {
+            continue;
+        }
+        [filteredApplications addObject:app];
+    }
+    return filteredApplications;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"HiddenWhitelistCell"];
+    AppInfo *app = [self appAtIndexPath:indexPath];
+
+    if (app.icon) {
+        cell.imageView.image = [self scaledImage:app.icon size:CGSizeMake(40, 40)];
+    }
+
+    NSDictionary *allHiddenTweakSettings = [AppDelegate rootHideDictionaryForRelativePath:RHRootHideHiddenWhitelistTweaksRelativePath createIfNeeded:YES defaults:@{}];
+    NSDictionary *appHiddenTweakSettings = RHHiddenWhitelistSettingsEntryForApp(app, allHiddenTweakSettings);
+    NSInteger allowDenyMode = RHDictionaryIntegerValue(appHiddenTweakSettings[@"allowDenyMode"], RHHiddenTweakAllowMode);
+    NSArray<NSString *> *allowedTweaks = RHNormalizedStringArray(appHiddenTweakSettings[@"allowedTweaks"]);
+    NSArray<NSString *> *deniedTweaks = RHNormalizedStringArray(appHiddenTweakSettings[@"deniedTweaks"]);
+    NSUInteger tweakCount = allowDenyMode == RHHiddenTweakDenyMode ? deniedTweaks.count : allowedTweaks.count;
+
+    cell.textLabel.text = app.name;
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@  •  %@\n%@",
+                                 app.bundleIdentifier ?: @"",
+                                 [self applicationKeyForApp:app] ?: @"-",
+                                 RHTweakSelectionSummary(tweakCount)];
+    cell.detailTextLabel.numberOfLines = 3;
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    AppInfo *app = [self appAtIndexPath:indexPath];
+    [self.navigationController pushViewController:[[RHTweakSelectionViewController alloc] initWithApp:app] animated:YES];
 }
 
 @end
@@ -1889,6 +2400,327 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
 @end
 
+//------------------------------------------------------------------------------
+#pragma mark - Generic Plist Viewer/Editor
+
+@implementation RHGenericPlistViewController
+
+- (instancetype)initWithTitle:(NSString *)title relativePath:(NSString *)relativePath footerText:(NSString *)footerText
+{
+    self = [super initWithStyle:UITableViewStyleInsetGrouped];
+    if (self) {
+        self.plistTitle = title;
+        self.relativePath = relativePath;
+        self.footerText = footerText;
+    }
+    return self;
+}
+
+- (void)reloadData
+{
+    // Nested views don't re-read from disk — their data comes from the parent.
+    if (!self.parentPlistVC) {
+        self.dictionary = [AppDelegate rootHideDictionaryForRelativePath:self.relativePath createIfNeeded:NO defaults:nil];
+        if (!self.dictionary) {
+            self.dictionary = [NSMutableDictionary dictionary];
+        }
+    }
+    self.sortedKeys = [[self.dictionary allKeys] sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.title = self.plistTitle;
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addEntry)];
+    [self reloadData];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    (void)tableView;
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    return self.sortedKeys.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    (void)tableView;
+    (void)section;
+    NSString *resolvedPath = [AppDelegate rootHidePathForRelativePath:self.relativePath];
+    if (self.footerText.length > 0) {
+        return [NSString stringWithFormat:@"%@\n\n%@", self.footerText, resolvedPath];
+    }
+    return resolvedPath;
+}
+
+static NSString *RHPlistValueDescription(id value)
+{
+    if (!value) return @"(null)";
+    if ([value isKindOfClass:[NSNumber class]]) {
+        if (strcmp([value objCType], @encode(BOOL)) == 0 || strcmp([value objCType], @encode(char)) == 0) {
+            return [value boolValue] ? @"YES" : @"NO";
+        }
+        return [value stringValue];
+    }
+    if ([value isKindOfClass:[NSString class]]) {
+        return value;
+    }
+    if ([value isKindOfClass:[NSDictionary class]]) {
+        return [NSString stringWithFormat:@"{ %lu keys }", (unsigned long)[(NSDictionary *)value count]];
+    }
+    if ([value isKindOfClass:[NSArray class]]) {
+        return [NSString stringWithFormat:@"[ %lu items ]", (unsigned long)[(NSArray *)value count]];
+    }
+    return [value description];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"GenericPlistCell"];
+    NSString *key = self.sortedKeys[indexPath.row];
+    id value = self.dictionary[key];
+
+    cell.textLabel.text = key;
+    cell.textLabel.font = [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightMedium];
+    cell.detailTextLabel.text = RHPlistValueDescription(value);
+    cell.detailTextLabel.numberOfLines = 3;
+
+    if ([value isKindOfClass:[NSDictionary class]] || [value isKindOfClass:[NSArray class]]) {
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    } else if ([value isKindOfClass:[NSNumber class]] &&
+               (strcmp([value objCType], @encode(BOOL)) == 0 || strcmp([value objCType], @encode(char)) == 0)) {
+        UISwitch *toggle = [[UISwitch alloc] init];
+        toggle.on = [value boolValue];
+        toggle.tag = indexPath.row;
+        [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+        cell.accessoryView = toggle;
+    }
+    return cell;
+}
+
+- (void)persistChanges
+{
+    if (self.parentPlistVC) {
+        // Write our dictionary back into the parent's key, then let parent persist.
+        self.parentPlistVC.dictionary[self.parentKey] = [self.dictionary copy];
+        [self.parentPlistVC persistChanges];
+    } else {
+        [AppDelegate writeRootHideDictionary:self.dictionary toRelativePath:self.relativePath];
+        [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
+    }
+}
+
+- (void)switchChanged:(UISwitch *)toggle
+{
+    if (toggle.tag >= (NSInteger)self.sortedKeys.count) return;
+    NSString *key = self.sortedKeys[toggle.tag];
+    self.dictionary[key] = @(toggle.on);
+    [self persistChanges];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSString *key = self.sortedKeys[indexPath.row];
+    id value = self.dictionary[key];
+
+    if ([value isKindOfClass:[NSDictionary class]]) {
+        // Push a nested plist viewer that saves back through us.
+        RHGenericPlistViewController *nested = [[RHGenericPlistViewController alloc]
+            initWithTitle:key
+             relativePath:self.relativePath
+               footerText:[NSString stringWithFormat:@"Nested dictionary under key \"%@\"", key]];
+        nested.dictionary = [value mutableCopy];
+        nested.sortedKeys = [[value allKeys] sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
+        nested.parentPlistVC = self;
+        nested.parentKey = key;
+        [self.navigationController pushViewController:nested animated:YES];
+        return;
+    }
+
+    if ([value isKindOfClass:[NSArray class]]) {
+        // Show array items as a simple read-only list (e.g. allowedTweaks)
+        NSArray *array = (NSArray *)value;
+        NSMutableString *items = [NSMutableString string];
+        for (NSUInteger i = 0; i < array.count; i++) {
+            [items appendFormat:@"%lu. %@\n", (unsigned long)(i + 1), array[i]];
+        }
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:key
+                                                                       message:items.length > 0 ? items : @"(empty)"
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"OK") style:UIAlertActionStyleDefault handler:nil]];
+        [AppDelegate showAlert:alert];
+        return;
+    }
+
+    if ([value isKindOfClass:[NSString class]] || ([value isKindOfClass:[NSNumber class]] && strcmp([value objCType], @encode(BOOL)) != 0 && strcmp([value objCType], @encode(char)) != 0)) {
+        // Edit string/number value
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:key
+                                                                       message:Localized(@"Edit value")
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+            textField.text = [value isKindOfClass:[NSString class]] ? value : [value stringValue];
+            textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+        }];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Save") style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+            NSString *newValue = alert.textFields.firstObject.text;
+            if ([value isKindOfClass:[NSNumber class]]) {
+                self.dictionary[key] = @(newValue.doubleValue);
+            } else {
+                self.dictionary[key] = newValue ?: @"";
+            }
+            [self persistChanges];
+            [self reloadData];
+            [self.tableView reloadData];
+        }]];
+        [AppDelegate showAlert:alert];
+    }
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    (void)indexPath;
+    return YES;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (editingStyle != UITableViewCellEditingStyleDelete) return;
+    NSString *key = self.sortedKeys[indexPath.row];
+    [self.dictionary removeObjectForKey:key];
+    [self persistChanges];
+    [self reloadData];
+    [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+}
+
+- (void)addEntry
+{
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Add Entry")
+                                                                   message:Localized(@"Enter key and value")
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = Localized(@"Key");
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = Localized(@"Value (text, number, or true/false)");
+        textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+        textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Add") style:UIAlertActionStyleDefault handler:^(__unused UIAlertAction *action) {
+        NSString *key = [alert.textFields[0].text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        NSString *valueStr = [alert.textFields[1].text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (key.length == 0) return;
+
+        id value;
+        if ([valueStr caseInsensitiveCompare:@"true"] == NSOrderedSame || [valueStr caseInsensitiveCompare:@"yes"] == NSOrderedSame) {
+            value = @YES;
+        } else if ([valueStr caseInsensitiveCompare:@"false"] == NSOrderedSame || [valueStr caseInsensitiveCompare:@"no"] == NSOrderedSame) {
+            value = @NO;
+        } else {
+            NSScanner *scanner = [NSScanner scannerWithString:valueStr];
+            double numValue = 0;
+            if ([scanner scanDouble:&numValue] && scanner.isAtEnd) {
+                value = @(numValue);
+            } else {
+                value = valueStr;
+            }
+        }
+        self.dictionary[key] = value;
+        [self persistChanges];
+        [self reloadData];
+        [self.tableView reloadData];
+    }]];
+    [AppDelegate showAlert:alert];
+}
+
+@end
+
+//------------------------------------------------------------------------------
+#pragma mark - RootHide Blacklist Plist Viewer (RootHideConfig.plist appconfig)
+
+@interface RHBlacklistPlistViewController : UITableViewController
+@property (nonatomic, retain) NSMutableDictionary *appconfig;
+@property (nonatomic, copy) NSArray<NSString *> *sortedKeys;
+@end
+
+@implementation RHBlacklistPlistViewController
+
+- (instancetype)init
+{
+    self = [super initWithStyle:UITableViewStyleInsetGrouped];
+    return self;
+}
+
+- (void)reloadData
+{
+    NSMutableDictionary *config = [AppDelegate getDefaultsForKey:@"appconfig"];
+    self.appconfig = [config isKindOfClass:[NSMutableDictionary class]] ? config : [config mutableCopy] ?: [NSMutableDictionary dictionary];
+    self.sortedKeys = [[self.appconfig allKeys] sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.title = Localized(@"Blacklist (RootHideConfig)");
+    [self reloadData];
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    (void)tableView; (void)section;
+    return self.sortedKeys.count;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    (void)tableView; (void)section;
+    NSString *resolvedPath = jbroot(@"/var/mobile/Library/RootHide/RootHideConfig.plist");
+    return [NSString stringWithFormat:@"The \"appconfig\" dictionary from RootHideConfig.plist.\nApps marked YES are hidden (blacklisted) from tweak injection.\n\n%@", resolvedPath ?: @""];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    (void)tableView;
+    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"BlacklistPlistCell"];
+    NSString *key = self.sortedKeys[indexPath.row];
+    BOOL enabled = RHDictionaryBoolValue(self.appconfig[key]);
+
+    cell.textLabel.text = key;
+    cell.textLabel.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightRegular];
+    cell.detailTextLabel.text = enabled ? @"Hidden (blacklisted)" : @"Not hidden";
+
+    UISwitch *toggle = [[UISwitch alloc] init];
+    toggle.on = enabled;
+    toggle.tag = indexPath.row;
+    [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+    cell.accessoryView = toggle;
+    return cell;
+}
+
+- (void)switchChanged:(UISwitch *)toggle
+{
+    if (toggle.tag >= (NSInteger)self.sortedKeys.count) return;
+    NSString *key = self.sortedKeys[toggle.tag];
+    self.appconfig[key] = @(toggle.on);
+    [AppDelegate setDefaults:self.appconfig forKey:@"appconfig"];
+    [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
+}
+
+@end
+
 @implementation SettingViewController
 
 + (instancetype)sharedInstance
@@ -1927,6 +2759,16 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                                               showsTipsButton:NO];
     });
     return blacklistController;
+}
+
++ (UIViewController *)hiddenWhitelistController
+{
+    static RHHiddenWhitelistViewController *hiddenWhitelistController = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        hiddenWhitelistController = [[RHHiddenWhitelistViewController alloc] init];
+    });
+    return hiddenWhitelistController;
 }
 
 - (NSDictionary *)menuItemWithTitle:(NSString *)title detail:(NSString *)detail type:(NSString *)type target:(NSString *)target
@@ -1970,13 +2812,17 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                  detail:Localized(@"Hide TrollStore and jailbreak app registrations, optionally followed by a userspace reboot.")
                                    type:@"action"
                                  target:@"hideAppsActions"],
+                [self menuItemWithTitle:Localized(@"Reset All RHInject Settings")
+                                 detail:Localized(@"Delete all cn.zqbb.* and pro.m1337.* plists for a fresh start.")
+                                   type:@"action"
+                                 target:@"resetAllSettings"],
             ],
         },
         @{
-            @"groupTitle" : Localized(@"Whitelist Helpers"),
+            @"groupTitle" : Localized(@"Injection Rules & Plist Editors"),
             @"items" : @[
                 [self menuItemWithTitle:Localized(@"Whitelist Apps")
-                                 detail:Localized(@"Executables explicitly enabled in cn.zqbb.inject.plist.")
+                                 detail:Localized(@"Executables explicitly enabled in pro.m1337.inject.plist.")
                                    type:@"controller"
                                  target:@"whitelistApps"],
                 [self menuItemWithTitle:Localized(@"Forced Whitelist Entries")
@@ -1995,6 +2841,22 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
                                  detail:Localized(@"Additional executables that should receive the jetsam multiplier.")
                                    type:@"controller"
                                  target:@"jetsamAddend"],
+                [self menuItemWithTitle:Localized(@"Blacklist (RootHideConfig)")
+                                 detail:Localized(@"View/edit the appconfig dictionary in RootHideConfig.plist.")
+                                   type:@"controller"
+                                 target:@"plistBlacklist"],
+                [self menuItemWithTitle:Localized(@"Whitelist Rules (raw)")
+                                 detail:Localized(@"pro.m1337.inject.plist — raw key/value editor.")
+                                   type:@"controller"
+                                 target:@"plistWhitelist"],
+                [self menuItemWithTitle:Localized(@"Blacklist Rules (raw)")
+                                 detail:Localized(@"pro.m1337.uninject.plist — raw key/value editor.")
+                                   type:@"controller"
+                                 target:@"plistUninject"],
+                [self menuItemWithTitle:Localized(@"Hidden Whitelist Tweaks")
+                                 detail:Localized(@"pro.m1337.hiddenwhitelist.tweaks.plist — per-app tweak selections.")
+                                   type:@"controller"
+                                 target:@"plistHiddenTweaks"],
             ],
         },
         @{
@@ -2068,7 +2930,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     }
     else if ([item[@"type"] isEqualToString:@"action"]) {
         NSString *target = item[@"target"];
-        if ([target isEqualToString:@"hideAppsActions"]) {
+        if ([target isEqualToString:@"hideAppsActions"] || [target isEqualToString:@"resetAllSettings"]) {
             cell.textLabel.textColor = UIColor.systemRedColor;
             cell.detailTextLabel.textColor = UIColor.systemRedColor;
         }
@@ -2130,6 +2992,25 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     }
     if ([target isEqualToString:@"varCleanRules"]) {
         return [[RHVarCleanRulesViewController alloc] initWithStyle:UITableViewStyleInsetGrouped];
+    }
+    // Plist Editors
+    if ([target isEqualToString:@"plistBlacklist"]) {
+        return [[RHBlacklistPlistViewController alloc] init];
+    }
+    if ([target isEqualToString:@"plistWhitelist"]) {
+        return [[RHGenericPlistViewController alloc] initWithTitle:Localized(@"Whitelist Rules")
+                                                      relativePath:RHRootHideInjectRelativePath
+                                                        footerText:Localized(@"Per-executable whitelist toggles. Keys are executable names, values are booleans.")];
+    }
+    if ([target isEqualToString:@"plistUninject"]) {
+        return [[RHGenericPlistViewController alloc] initWithTitle:Localized(@"Blacklist Rules")
+                                                      relativePath:RHRootHideUninjectRelativePath
+                                                        footerText:Localized(@"Per-executable blacklist toggles. Keys are executable names, values are booleans.")];
+    }
+    if ([target isEqualToString:@"plistHiddenTweaks"]) {
+        return [[RHGenericPlistViewController alloc] initWithTitle:Localized(@"Hidden Whitelist Tweaks")
+                                                      relativePath:RHRootHideHiddenWhitelistTweaksRelativePath
+                                                        footerText:Localized(@"Per-app tweak selections for hidden whitelist mode. Keys are bundle IDs, values are dictionaries with allowDenyMode and tweak lists.")];
     }
     return nil;
 }
@@ -2220,6 +3101,44 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     [AppDelegate showAlert:alert];
 }
 
+- (void)presentResetAllSettingsConfirmation
+{
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:Localized(@"Reset All RHInject Settings")
+                                                                   message:Localized(@"This will delete all cn.zqbb.* and pro.m1337.* plists from the RootHide directory, giving you a completely fresh start.\n\nThis does NOT touch RootHideConfig.plist (Classic RootHide blacklist).\n\nA userspace reboot is recommended afterward.")
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Cancel") style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Reset + Reboot Userspace") style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [self performResetAllSettings];
+        [AppDelegate rebootUserspace];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:Localized(@"Reset Only") style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+        [self performResetAllSettings];
+        [AppDelegate showMessage:Localized(@"All RHInject plists deleted. A userspace reboot is recommended to apply the changes.") title:Localized(@"Reset Complete")];
+    }]];
+    [AppDelegate showAlert:alert];
+}
+
+- (void)performResetAllSettings
+{
+    NSString *rootHideDir = [AppDelegate rootHidePathForRelativePath:@"/var/mobile/Library/RootHide"];
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSArray<NSString *> *files = [fm contentsOfDirectoryAtPath:rootHideDir error:nil];
+    NSUInteger deletedCount = 0;
+    for (NSString *file in files) {
+        if ([file hasPrefix:@"cn.zqbb."] || [file hasPrefix:@"pro.m1337."]) {
+            NSString *fullPath = [rootHideDir stringByAppendingPathComponent:file];
+            NSError *error = nil;
+            if ([fm removeItemAtPath:fullPath error:&error]) {
+                deletedCount++;
+            }
+        }
+    }
+    NSLog(@"[RHInject] Reset: deleted %lu plist files from %@", (unsigned long)deletedCount, rootHideDir);
+    [[NSNotificationCenter defaultCenter] postNotificationName:RHInjectSettingsChangedNotification object:nil];
+    [self reloadMenu];
+    [self.tableView reloadData];
+}
+
 - (void)handleActionTarget:(NSString *)target
 {
     if ([target isEqualToString:@"reboot"]) {
@@ -2269,6 +3188,12 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
 
     if ([target isEqualToString:@"trollStoreActions"]) {
         [self presentTrollStoreActionSheetFromSourceView:nil];
+        return;
+    }
+
+    if ([target isEqualToString:@"resetAllSettings"]) {
+        [self presentResetAllSettingsConfirmation];
+        return;
     }
 }
 

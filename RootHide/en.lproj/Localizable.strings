@@ -22,6 +22,7 @@
 "Injection Mode" = "Injection Mode";
 "Stock" = "Stock";
 "Whitelist" = "Whitelist";
+"Hidden Whitelist" = "Hidden Whitelist";
 "Whitelist Default" = "Whitelist Default";
 "Blacklist Default" = "Blacklist Default";
 "Inherit" = "Inherit";
@@ -29,6 +30,7 @@
 "Keep stock RootHide behavior." = "Keep stock RootHide behavior.";
 "Inject by default, but skip selected executables." = "Inject by default, but skip selected executables.";
 "Only inject selected executables and approved system paths." = "Only inject selected executables and approved system paths.";
+"Only inject selected executables, but keep hidden-app blacklist semantics for marked apps." = "Only inject selected executables, but keep hidden-app blacklist semantics for marked apps.";
 "Changing the runtime mode needs a userspace reboot to affect launchd-managed spawns." = "Changing the runtime mode needs a userspace reboot to affect launchd-managed spawns.";
 "A userspace reboot is needed to apply the injection-mode change. Reboot now?" = "A userspace reboot is needed to apply the injection-mode change. Reboot now?";
 "Userspace Reboot Required" = "Userspace Reboot Required";
@@ -77,7 +79,7 @@
 "Whitelist Apps" = "Whitelist Apps";
 "Uninject Apps" = "Uninject Apps";
 "Forced Whitelist Entries" = "Forced Whitelist Entries";
-"Executables explicitly enabled in cn.zqbb.inject.plist." = "Executables explicitly enabled in cn.zqbb.inject.plist.";
+"Executables explicitly enabled in pro.m1337.inject.plist." = "Executables explicitly enabled in pro.m1337.inject.plist.";
 "Read-only view of entries forced on by whitelist helpers." = "Read-only view of entries forced on by whitelist helpers.";
 "Executable allowlist for whitelist mode." = "Executable allowlist for whitelist mode.";
 "Executable denylist for blacklist mode." = "Executable denylist for blacklist mode.";
@@ -125,6 +127,21 @@
 "These entries are forced on by whitelist helpers and appear locked in the whitelist app browser." = "These entries are forced on by whitelist helpers and appear locked in the whitelist app browser.";
 "Jailbreak Apps" = "Jailbreak Apps";
 "Those marked in red are required by the plug-in, and it is recommended to enable them.\n\nFor the UIKit global plug-in, please enable the corresponding app on your own.\n\nFor the home screen search feature, please enable Spotlight.\n\nRegarding third-party keyboard extensions, please inject the corresponding appex background. (For example, WeChat is wxkb_plugin).\n\nAfter enabling whitelist mode, the blacklist injection tab becomes inactive. QQ, WeChat, Runner, and AppStore can still use the hidden-app blacklist through inject.wantsblacklist." = "Those marked in red are required by the plug-in, and it is recommended to enable them.\n\nFor the UIKit global plug-in, please enable the corresponding app on your own.\n\nFor the home screen search feature, please enable Spotlight.\n\nRegarding third-party keyboard extensions, please inject the corresponding appex background. (For example, WeChat is wxkb_plugin).\n\nAfter enabling whitelist mode, the blacklist injection tab becomes inactive. QQ, WeChat, Runner, and AppStore can still use the hidden-app blacklist through inject.wantsblacklist.";
+"Only inject selected executables for apps that are also marked hidden in the RootHide tab. Use the Hidden Whitelist tab to pick which tweaks may load." = "Only inject selected executables for apps that are also marked hidden in the RootHide tab. Use the Hidden Whitelist tab to pick which tweaks may load.";
+"Apps shown here are both hidden in Classic RootHide and enabled in Whitelist. Tap an app to choose which tweaks may load in hidden mode." = "Apps shown here are both hidden in Classic RootHide and enabled in Whitelist. Tap an app to choose which tweaks may load in hidden mode.";
+"No tweaks selected" = "No tweaks selected";
+"1 tweak selected" = "1 tweak selected";
+"%lu tweaks selected" = "%lu tweaks selected";
+"Mode" = "Mode";
+"Per-app hidden tweak filter" = "Per-app hidden tweak filter";
+"This stays separate from Choicy. Hidden Whitelist uses it to decide which tweak dylibs may load." = "This stays separate from Choicy. Hidden Whitelist uses it to decide which tweak dylibs may load.";
+"Choose whether the listed tweaks are explicitly allowed or explicitly denied when hidden injection loads TweakLoader for this app." = "Choose whether the listed tweaks are explicitly allowed or explicitly denied when hidden injection loads TweakLoader for this app.";
+"Tweaks" = "Tweaks";
+"No matching tweak filters were found for this app." = "No matching tweak filters were found for this app.";
+"Only these tweak dylibs are considered when Hidden Whitelist turns minimal injection on for this app." = "Only these tweak dylibs are considered when Hidden Whitelist turns minimal injection on for this app.";
+"Global filter" = "Global filter";
+"Allow" = "Allow";
+"Deny" = "Deny";
 "Enabled" = "Enabled";
 "Disabled" = "Disabled";
 "Cancel" = "Cancel";

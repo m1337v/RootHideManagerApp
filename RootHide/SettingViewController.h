@@ -7,6 +7,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)sharedInstance;
 + (UIViewController *)whitelistController;
 + (UIViewController *)blacklistController;
++ (UIViewController *)hiddenWhitelistController;
 
 @end
 
