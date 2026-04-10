@@ -60,6 +60,9 @@ static BOOL RHPathIsDefaultInstallationPath(NSString *path)
 
 static NSString *RHModeDisplayName(NSString *mode)
 {
+    if ([mode isEqualToString:@"blacklistallowlist"]) {
+        return Localized(@"Blacklist + Allowlist");
+    }
     if ([mode isEqualToString:@"hiddenwhitelist"]) {
         return Localized(@"Hidden Whitelist");
     }
@@ -74,6 +77,9 @@ static NSString *RHModeDisplayName(NSString *mode)
 
 static NSString *RHVarCleanModeDisplayName(NSString *mode)
 {
+    if ([mode isEqualToString:@"blacklistallowlist"]) {
+        return Localized(@"Blacklist + Allowlist");
+    }
     if ([mode isEqualToString:@"hiddenwhitelist"]) {
         return Localized(@"Hidden Whitelist");
     }
@@ -410,6 +416,11 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
             @"mode" : @"hiddenwhitelist",
             @"title" : Localized(@"Hidden Whitelist"),
             @"detail" : Localized(@"Only inject selected executables for apps that are also marked hidden in the RootHide tab. Use the Hidden Whitelist tab to pick which tweaks may load."),
+        },
+        @{
+            @"mode" : @"blacklistallowlist",
+            @"title" : Localized(@"Blacklist + Allowlist"),
+            @"detail" : Localized(@"Reuse the existing Whitelist and Hidden Whitelist settings, but keep selected apps on the blacklist-backed path with restricted Roothide access."),
         },
     ];
 }
@@ -1936,7 +1947,7 @@ static NSString *RHDisplayNameForInfoDictionary(NSDictionary *infoDictionary, NS
     self = [super initWithTitle:Localized(@"Hidden Whitelist")
               rulesRelativePath:RHRootHideInjectRelativePath
                   preferredMode:@"hiddenwhitelist"
-                     footerText:Localized(@"Apps shown here are both hidden in Classic RootHide and enabled in Whitelist. Tap an app to choose which tweaks may load in hidden mode.")
+                     footerText:Localized(@"Apps shown here are both hidden in Classic RootHide and enabled in Whitelist. Tap an app to choose which tweaks may load in Hidden Whitelist or Blacklist + Allowlist mode.")
                 showsTipsButton:NO];
     return self;
 }
